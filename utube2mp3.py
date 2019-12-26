@@ -319,7 +319,7 @@ def main():
                     else:
                         directory = "/Users/andrewyeon/Documents/Music Folder"
                         break
-                    break
+                break
             else:
                 clear()
                 print("Invalid Input. Please try again. \n")
@@ -358,8 +358,10 @@ def main():
         print("---------------------------------------------------------------------------------------------- \n")
         resume = input("Would you like to resume converting Youtube Videos?: \n (reply with 'y' to continue and 'n' to quit)\n")
         if resume == "y" or resume == 'yes' or resume == "Y" or resume == "Yes" or resume == "YES":
+            mp3ToDropbox = False
             resume = True
         elif resume == "n" or resume == "no" or resume == "N" or resume == "No" or resume == "NO":
+            mp3ToDropbox = False
             resume = False
 
 main()
