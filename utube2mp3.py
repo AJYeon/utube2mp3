@@ -9,7 +9,6 @@ import subprocess as sp
 from collections import OrderedDict
 
 
-
 try:
     import youtube_dl  # pip install youtube_dl
 except ImportError:
@@ -38,6 +37,19 @@ Clears all the text currently displayed on the terminal window and flushes the b
 '''
 def clear():
     os.system("clear")
+
+
+def retrieveLocalInf():
+    if os.path.isfile("local_inf"):
+        f = open("local_inf", 'r')
+        contents = f.read()
+        information = contents.splitlines()
+        f.close()
+        return information
+    else:
+        return False
+        
+    
 
 '''
 Checks all outdated python modules needed for the running of this program and updates the modules if they are outdated
@@ -260,6 +272,7 @@ def createMP3(linkList, dir):
 
 
 def main():
+    
     print("----------------------------------------------------------------------------------------------")
     print("  _      _  ________  _      _  ________  ________   ______   __       __  _______   ________ ")   
     print(" | |    | ||__    __|| |    | ||   __   ||        | /  _   \ |  \     /  ||  ____ \ |_____   |")
@@ -270,20 +283,29 @@ def main():
     print(" | \____/ |   |  |   | \____/ || |____| ||        | /  /____ |  |     |  ||  |      /\____)  )")
     print("  \______/    [__]    \______/ [________]|________||________||__|     |__||__|      \_______/ ")
     print("---------------------------------------------------------------------------------------------- \n \n")
+
     mp3ToDropbox = False
     resume = True
+    localInf = retrieveLocalInf()
+    
+    
     print("----------------------------------------------------------------------------------------------")
     print('Checking for Module Updates...')
     print("---------------------------------------------------------------------------------------------- \n")
+    
     updated = updatePackages()
     if updated:
+        
         print("\n----------------------------------------------------------------------------------------------")
         print('Outdated modules have been found: ' + updated + ' \n Modules have been Updated! Resuming...')
         print("---------------------------------------------------------------------------------------------- \n")
+        
     else:
+        
         print("----------------------------------------------------------------------------------------------")
         print('All modules are currently up-to-date! Resuming...')
         print("---------------------------------------------------------------------------------------------- \n\n")
+        
     while resume == True:  # Conversion process restarts if user wishes to resume converting
         while True:
             compOrDropbox = input("Would you like to save the files to Dropbox or to a local directory?: \n (reply with 'd' for Dropbox and 'l' for local directory) \n")
@@ -301,11 +323,15 @@ def main():
                         else:
                             break  
                     else:
-                        dbx = dropbox.Dropbox('sjUdCDDblF8AAAAAAAAA6N5N2Ou2UdMxXrSZDb8PZmegtCelLbr3I6csg7myrvW5')
-                        break
-                dbxDirectory = input("\n \n Please provide the directory in Dropbox to which the .mp3 files will be placed in: \n")
+                        if localInf:
+                            dbx = dropbox.Dropbox(localInf[0])
+                            break
+                        else:
+                            clear()
+                            print("No access token was provided.")
+                dbxDirectory = input("\n \n Please provide the Dropbox directory where the .mp3 files will be placed in: \n (Note: The directory must be valid and precise. Otherwise, the program may not finish)\n")
                 if not dbxDirectory:
-                    dbxDirectory = "/Public/Music Folder"
+                    dbxDirectory = localInf[1]
                     break
             elif compOrDropbox == 'l' or compOrDropbox == 'local' or compOrDropbox == 'localdirectory' or compOrDropbox == 'local directory' or compOrDropbox == 'Local' or compOrDropbox == 'Localdirectory' or compOrDropbox == 'Local directory' or compOrDropbox == 'Local Directory':
                 while True:
@@ -317,8 +343,12 @@ def main():
                             clear()
                             print("Invalid path, please provide a valid path.")
                     else:
-                        directory = "/Users/andrewyeon/Documents/Music Folder"
-                        break
+                        if localInf:
+                            directory = localInf[2]
+                            break
+                        else:
+                            clear()
+                            print("No path was provided.") 
                 break
             else:
                 clear()
