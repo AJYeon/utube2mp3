@@ -44,7 +44,9 @@ Clears all the text currently displayed on the terminal window and flushes the b
 def clear():
     os.system("clear")
 
-
+'''
+Opens file containing readable local information and returns a list containing: Dropbox API key, Dropbox destination path, local destination path
+''' 
 def retrieveLocalInf():
     if os.path.isfile("local_inf"):
         f = open("local_inf", 'r')
@@ -54,9 +56,7 @@ def retrieveLocalInf():
         return information
     else:
         return False
-        
-    
-
+ 
 '''
 Checks all outdated python modules needed for the running of this program and updates the modules if they are outdated
 '''  
@@ -215,17 +215,14 @@ and returns a string of the relocated filepath. Helper function to getFFmpegDict
 '''
 def movetoRoot(mainDir,dirCheck):
     if os.path.isdir(dirCheck):
-        #tempDir = mainDir + '/' + dirCheck
         tempDir = os.path.join(mainDir, dirCheck)
         remDirectory = os.listdir(tempDir)
         for file in remDirectory:
-            #newFileName = dirCheck + '/' + file
             newFileName = os.path.join(dirCheck, file)
             tempPath = os.path.join(tempDir, file)
             rootPath = os.path.join(mainDir, file)
             os.rename(tempPath, rootPath)
         os.rmdir(tempDir)
-        #print("newFileName: " + newFileName)
         return newFileName
 
 '''      
@@ -249,7 +246,6 @@ def getFFmpegDicts(dir,frontSlashTitles):
     isArtist = True
     mapAccum = 0
     for file in musicDirectory:
-        #if file.endswith('.mkv') or file.endswith('.mp4') or file.endswith('.ogg') or file.endswith('.webm') or file.endswith('.flv'):
         if file.endswith((".mkv", ".mp4", ".ogg", ".webm", ".flv")):
             artCheck = file.rfind("-")
             if artCheck == -1:
@@ -289,7 +285,6 @@ def setArtist(path,metadata,songs):
     #print(songs)
     for entry in songs.items():
         songPath = os.path.join(path, entry[0])
-        #audiofile =  eyed3.load(path + '/' + entry[0])
         audioFile = eyed3.load(songPath)
         audioFile.tag.artist = metadata[index]
         audioFile.tag.save()
@@ -329,8 +324,6 @@ def createMP3(linkList, dir):
         print("---------------------------------------------------------------------------------------------- \n")
         print("Downloading Youtube videos " + str(url[0] + 1) + " out of " + str(len(linkList)) + "\n  (Title: " + videoName + ") \n")
         print("---------------------------------------------------------------------------------------------- \n")
-        
-        #videoDirectory = dir + '/' + videoName
         videoDirectory = os.path.join(dir, videoName)
         print("videoDirectory: " + videoDirectory)
         extractCheck = urlToVideo(url[1],videoDirectory)
@@ -398,7 +391,6 @@ def main():
             compOrDropbox = input ("Would you like to save the files to Dropbox or to a local directory?: \n" 
                                   "(reply with 'd' for Dropbox and 'l' for local directory) \n")
             compOrDropbox = compOrDropbox.lower()
-            #if compOrDropbox == 'd' or  compOrDropbox == 'D' or compOrDropbox == 'Dropbox' or compOrDropbox == 'dropbox' or  compOrDropbox == 'drop' or  compOrDropbox == 'Drop':
             if compOrDropbox in ('d', "dropbox", "drop"):
                 mp3ToDropbox = True
                 directory = os.getcwd()
@@ -424,7 +416,6 @@ def main():
                 if not dbxDirectory:
                     dbxDirectory = localInf[1]
                     break
-            #elif compOrDropbox == 'l' or compOrDropbox == 'local' or compOrDropbox == 'localdirectory' or compOrDropbox == 'local directory' or compOrDropbox == 'Local' or compOrDropbox == 'Localdirectory' or compOrDropbox == 'Local directory' or compOrDropbox == 'Local Directory':
             elif compOrDropbox in ('l', "local", "localdirectory", "local directory"):
                 while True:
                     directory = input("\n \n Please paste the path that you would like your music to be downloaded to: \n")
