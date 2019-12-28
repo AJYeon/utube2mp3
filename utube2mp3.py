@@ -12,23 +12,27 @@ from collections import OrderedDict
 try:
     import youtube_dl  # pip install youtube_dl
 except ImportError:
-    print("Please install the youtube_dl python package before proceeding, otherwise the program will not function properly (pip install youtube_dl) \n")
+    print("""Please install the youtube_dl python package before proceeding, 
+             otherwise the program will not function properly (pip install youtube_dl) \n""")
     sys.exit()
 try:
     import dropbox  # pip install dropbox
 except ImportError:
-    print("Please install the dropbox python package before proceeding, otherwise the program will not function properly  (pip install dropbox) \n")
+    print("""Please install the dropbox python package before proceeding, 
+           otherwise the program will not function properly  (pip install dropbox) \n""")
     sys.exit()
 try:
     from ffmpy import FFmpeg  # pip install ffmpy + brew install FFmpeg
 except ImportError:
-    print("Please install the ffmpy python package from brew before proceeding, otherwise the program will not function properly  [(pip install ffmpy) + (brew install FFmpeg)] \n")
+    print("""Please install the ffmpy python package from brew before proceeding, 
+           otherwise the program will not function properly  [(pip install ffmpy) + (brew install FFmpeg)] \n""")
     sys.exit()
 
 try:
     import eyed3  # pip install eyeD3 + pip install python-magic-bin==0.4.14
 except ImportError:
-    print("Please install the eyeD3 python package before proceeding, otherwise the program will not function properly (pip install eyeD3 + pip install python-magic-bin==0.4.14) \n")
+    print("""Please install the eyeD3 python package before proceeding, 
+           otherwise the program will not function properly (pip install eyeD3 + pip install python-magic-bin==0.4.14) \n""")
     sys.exit()
 
 
@@ -135,38 +139,46 @@ def urlToVideo(url,outDirectory):
             ydl.download([url])
         except youtube_dl.utils.DownloadError:
             clear()
-            print("DownloadError: The video is unavailable.")
+            print("DownloadError: The video cannot be accessed.")
             return False
         except youtube_dl.utils.UnavailableVideoError:
             clear()
-            print("UnavailableVideoError:")
+            print("UnavailableVideoError: The video is currently unavailable")
             return False
     
 '''      
-Relocates video files with titles including '/' mistakenly parsed as an additional directory to the root directory. Helper function to getFFmpegDicts
+Relocates video files with titles including '/' mistakenly parsed as an additional directory to the root directory 
+and returns a string of the relocated filepath. Helper function to getFFmpegDicts
 '''
 def movetoRoot(mainDir,dirCheck):
     if os.path.isdir(dirCheck):
-        tempDir = mainDir + '/' + dirCheck
+        #tempDir = mainDir + '/' + dirCheck
+        tempDir = os.path.join(mainDir, dirCheck)
         remDirectory = os.listdir(tempDir)
         for file in remDirectory:
-            newFileName = dirCheck + '/' + file 
-            os.rename(tempDir + '/' + file, mainDir + '/' + file)
+            #newFileName = dirCheck + '/' + file
+            newFileName = os.path.join(dirCheck, file)
+            tempPath = os.path.join(tempDir, file)
+            rootPath = os.path.join(mainDir, file)
+            os.rename(tempPath, rootPath)
         os.rmdir(tempDir)
-        print("newFileName: " + newFileName)
+        #print("newFileName: " + newFileName)
         return newFileName
 
 '''      
 Accepts a directory of video files and returns boilerplate dictionaries of the files for FFmpeg to properly parse
 '''
-def getFFmpegDicts(dir,bsDirectories):
+def getFFmpegDicts(dir,frontSlashTitles):
     vidDict = {}
     mp3Dict = {}
-    if bsDirectories:
-        for file in bsDirectories:
-            fileCheck = movetoRoot(dir, file[:file.rfind('/')])
-            os.rename(os.path.join(dir,fileCheck[fileCheck.rfind('/') + 1:]), os.path.join(dir,fileCheck.replace('/','_')))
-            # Backslashes replaced with underscores. Possible to reapply the backslashes?
+    if frontSlashTitles:
+        if sys.platform not in ('win32', 'cygwin'):
+            for file in frontSlashTitles:
+                fileCheck = movetoRoot(dir, file[:file.rfind('/')])
+                oldPath = os.path.join(dir, fileCheck[fileCheck.rfind('/') + 1:])
+                underscorePath =  os.path.join(dir, fileCheck.replace('/','_'))
+                os.rename(oldPath, underscorePath)
+                # Backslashes replaced with underscores. Possible to reapply the backslashes?
     musicDirectory = os.listdir(dir)
     vidList = []
     mp3List = []
@@ -174,7 +186,8 @@ def getFFmpegDicts(dir,bsDirectories):
     isArtist = True
     mapAccum = 0
     for file in musicDirectory:
-        if file.endswith('.mkv') or file.endswith('.mp4') or file.endswith('.ogg') or file.endswith('.webm') or file.endswith('.flv'):
+        #if file.endswith('.mkv') or file.endswith('.mp4') or file.endswith('.ogg') or file.endswith('.webm') or file.endswith('.flv'):
+        if file.endswith((".mkv", ".mp4", ".ogg", ".webm", ".flv")):
             artCheck = file.rfind("-")
             if artCheck == -1:
                 isArtist = False
@@ -186,8 +199,8 @@ def getFFmpegDicts(dir,bsDirectories):
             else:
                 newTitle = file
                 artList.append("")
-            os.rename(dir + '/' + file, dir + '/' + newTitle)
-            vidList.append((newTitle,None))
+            os.rename(os.path.join(dir, file), os.path.join(dir, newTitle))
+            vidList.append((newTitle, None))
             mp3String = newTitle[:newTitle.rfind('.')] + '.mp3'  # indexes the file extension of the video and replaces everything after and including the '.' with '.mp3'
             mp3List.append((mp3String,"-map " + str(mapAccum) + ":1")) # additional parameters on top the mp3 file name
             mapAccum += 1
@@ -210,11 +223,13 @@ Removes the artist's name from the title and places it in the song's tag instead
 '''
 def setArtist(path,metadata,songs):
     index = 0
-    print(songs)
+    #print(songs)
     for entry in songs.items():
-        audiofile =  eyed3.load(path + '/' + entry[0])
-        audiofile.tag.artist = metadata[index]
-        audiofile.tag.save()
+        songPath = os.path.join(path, entry[0])
+        #audiofile =  eyed3.load(path + '/' + entry[0])
+        audioFile = eyed3.load(songPath)
+        audioFile.tag.artist = metadata[index]
+        audioFile.tag.save()
         index += 1
 
 '''
@@ -247,25 +262,35 @@ def createMP3(linkList, dir):
             videoName = videoName.replace('&amp;','&')  # Ampersand in decimal
         if '/' in videoName:
              frontSlashList.append(videoName)
+             
         print("---------------------------------------------------------------------------------------------- \n")
         print("Downloading Youtube videos " + str(url[0] + 1) + " out of " + str(len(linkList)) + "\n  (Title: " + videoName + ") \n")
         print("---------------------------------------------------------------------------------------------- \n")
-        videoDirectory = dir + '/' + videoName
+        
+        #videoDirectory = dir + '/' + videoName
+        videoDirectory = os.path.join(dir, videoName)
         print("videoDirectory: " + videoDirectory)
         extractCheck = urlToVideo(url[1],videoDirectory)
         if extractCheck == False:
             return
     videoDict,musicDict,artistList = getFFmpegDicts(dir,frontSlashList)
-    print("---------------------------------------------------------------------------------------------- \n")
+    
+    print("---------------------------------------------------------------------------------------------- ")
     print('Now Converting videos to MP3...')
-    videosToMp3(videoDict,musicDict)
     print("---------------------------------------------------------------------------------------------- \n")
+    
+    videosToMp3(videoDict,musicDict)
+
+    print("---------------------------------------------------------------------------------------------- ")
     print('Now Modifying MP3 Metadata...')
+    print("---------------------------------------------------------------------------------------------- \n")
+    
     setArtist(dir,artistList,musicDict)
-    clear()
+    
     print("----------------------------------------------------------------------------------------------")
     print("Now Deleting Videos...")
     print("---------------------------------------------------------------------------------------------- \n")
+    
     deleteVideos(videoDict)            
     os.chdir(savedCWD)  # Reverts the main directory back
     return musicDict
@@ -288,7 +313,6 @@ def main():
     resume = True
     localInf = retrieveLocalInf()
     
-    
     print("----------------------------------------------------------------------------------------------")
     print('Checking for Module Updates...')
     print("---------------------------------------------------------------------------------------------- \n")
@@ -304,12 +328,14 @@ def main():
         
         print("----------------------------------------------------------------------------------------------")
         print('All modules are currently up-to-date! Resuming...')
-        print("---------------------------------------------------------------------------------------------- \n\n")
+        print("---------------------------------------------------------------------------------------------- \n")
         
     while resume == True:  # Conversion process restarts if user wishes to resume converting
         while True:
+            clear()
             compOrDropbox = input("Would you like to save the files to Dropbox or to a local directory?: \n (reply with 'd' for Dropbox and 'l' for local directory) \n")
-            if compOrDropbox == 'd' or  compOrDropbox == 'D' or compOrDropbox == 'Dropbox' or compOrDropbox == 'dropbox' or  compOrDropbox == 'drop' or  compOrDropbox == 'Drop':
+            #if compOrDropbox == 'd' or  compOrDropbox == 'D' or compOrDropbox == 'Dropbox' or compOrDropbox == 'dropbox' or  compOrDropbox == 'drop' or  compOrDropbox == 'Drop':
+            if compOrDropbox in ('d', 'D', 'Dropbox', 'dropbox', 'drop', 'Drop'):
                 mp3ToDropbox = True
                 directory = os.getcwd()
                 while True:
@@ -333,7 +359,8 @@ def main():
                 if not dbxDirectory:
                     dbxDirectory = localInf[1]
                     break
-            elif compOrDropbox == 'l' or compOrDropbox == 'local' or compOrDropbox == 'localdirectory' or compOrDropbox == 'local directory' or compOrDropbox == 'Local' or compOrDropbox == 'Localdirectory' or compOrDropbox == 'Local directory' or compOrDropbox == 'Local Directory':
+            #elif compOrDropbox == 'l' or compOrDropbox == 'local' or compOrDropbox == 'localdirectory' or compOrDropbox == 'local directory' or compOrDropbox == 'Local' or compOrDropbox == 'Localdirectory' or compOrDropbox == 'Local directory' or compOrDropbox == 'Local Directory':
+            elif compOrDropbox in ('l', "local", "localdirectory", "local directory", "Local", "Localdirectory", "LocalDirectory", "Local Directory"):
                 while True:
                     directory = input("\n \n Please paste the path that you would like your music to be downloaded to: \n")
                     if directory:
@@ -363,6 +390,7 @@ def main():
                 try:
                     mp3Dict = createMP3(urlToList(unconvSongs),directory) # Executes the conversion process and returns a dictionary with the music that was converted
                 except AttributeError or not mp3Dict: # Error in parsing youtube URLs or one of the URL's were either unavailable or stricken with copyright grounds
+                    clear()
                     print(" The Youtube URL's provided were invalid.")
                 else:
                     break
@@ -386,12 +414,19 @@ def main():
         print("----------------------------------------------------------------------------------------------")
         print('Finished!')
         print("---------------------------------------------------------------------------------------------- \n")
-        resume = input("Would you like to resume converting Youtube Videos?: \n (reply with 'y' to continue and 'n' to quit)\n")
-        if resume == "y" or resume == 'yes' or resume == "Y" or resume == "Yes" or resume == "YES":
-            mp3ToDropbox = False
-            resume = True
-        elif resume == "n" or resume == "no" or resume == "N" or resume == "No" or resume == "NO":
-            mp3ToDropbox = False
-            resume = False
+
+        while True:
+            resume = input("Would you like to resume converting Youtube Videos?: \n(reply with 'y' to continue and 'n' to quit)\n")
+            if resume in ('y', "yes", 'Y', "Yes", "YES"):
+                mp3ToDropbox = False
+                resume = True
+                break
+            elif resume in ('n', "no", 'N', "No", "NO"):
+                mp3ToDropbox = False
+                resume = False
+                break
+            else:
+                clear()
+                print("No option was provided.")
 
 main()
