@@ -13,27 +13,29 @@ from collections import OrderedDict
 try:
     import youtube_dl  # pip install youtube_dl
 except ImportError:
-    print("""Please install the youtube_dl python package before proceeding, 
-             otherwise the program will not function properly (pip install youtube_dl) \n""")
+    print("Please install the youtube_dl python package before proceeding,",
+          "otherwise the program will not function properly (pip install youtube_dl) \n")
     sys.exit()
 try:
     import dropbox  # pip install dropbox
 except ImportError:
-    print("""Please install the dropbox python package before proceeding, 
-           otherwise the program will not function properly  (pip install dropbox) \n""")
+    print("Please install the dropbox python package before proceeding,",
+          "otherwise the program will not function properly (pip install dropbox) \n")
     sys.exit()
 try:
     from ffmpy import FFmpeg  # pip install ffmpy + brew install FFmpeg
 except ImportError:
-    print("""Please install the ffmpy python package from brew before proceeding, 
-           otherwise the program will not function properly  [(pip install ffmpy) + (brew install FFmpeg)] \n""")
+    print("Please install the ffmpy python package from brew before proceeding," ,
+          "otherwise the program will not function properly \n" ,
+          "('brew install FFmpeg' and then 'pip install ffmpy') \n")
     sys.exit()
 
 try:
     import eyed3  # pip install eyeD3 + pip install python-magic-bin==0.4.14
 except ImportError:
-    print("""Please install the eyeD3 python package before proceeding, 
-           otherwise the program will not function properly (pip install eyeD3 + pip install python-magic-bin==0.4.14) \n""")
+    print("Please install the eyeD3 python package before proceeding," , 
+          "otherwise the program will not function properly \n" ,
+          "('pip install eyeD3' and then 'pip install python-magic-bin==0.4.14') \n")
     sys.exit()
 
 
@@ -50,18 +52,79 @@ def updatePackages():
     updatedPrograms = ''
     updateLog = sp.Popen(["pip list --outdated"], shell=True, stdout=sp.PIPE)
     output = updateLog.communicate()[0]
-    if b'youtube-dl' in output:  # CAUTION: "youtube-dl" is named in the updateLog list but package is named "youtube_dl"
-        print("----------------------------------------------------------------------------------------------")
-        print('Admin access required! Please enter your password')
-        print("---------------------------------------------------------------------------------------------- \n")
-        os.system('sudo -H pip install --upgrade youtube_dl')  # Might need to enter password if not admin
-        updatedPrograms += "youtube-dl"
-    if b'dropbox' in output:
-        os.system('pip install --upgrade dropbox')
-        updatedPrograms += " dropbox"
-    if b'ffmpy' in output:
-        os.system('pip install --upgrade ffmpy')
-        updatedPrograms += " ffmpy"
+    inVenv = False
+    confirm = ('y', "yes")
+    deny = ('n', "no")
+    if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
+    # Checks if python is currently being run on a virtual environment
+        inVenv = True  
+    if b"youtube-dl" in output:  # CAUTION: Module is named "youtube_dl" but updateLog list names the module "youtube-dl"
+        if inVenv:
+            while True:
+                youtube_ans = input("youtube_dl is outdated and updating it is necessary to run. Would you like to update the module"  
+                                    "on your virtual environment?: \n" 
+                                    "(reply with 'y' to update and 'n' to quit) \n")
+                youtube_ans = youtube_ans.lower()
+                if youtube_ans in confirm:
+                    os.system("pip install --upgrade youtube_dl")
+                    updatedPrograms += "youtube-dl"
+                    break
+                elif youtube_ans in deny:
+                    sys.exit()
+                else:
+                     print("Invalid answer. Please try again.")
+        else: # (Non-virtual environment case) Might need to enter password if not admin
+            while True:
+                youtube_ans = input("youtube_dl is outdated and updating it is necessary to run. Would you like to update the" 
+                                    "module?: \n (Note: Admin access is required! If prompted, you may need your computer's user password. \n" 
+                                    "reply with 'y' to update and 'n' to quit) \n")
+                if youtube_ans in confirm:
+                    os.system("sudo -H pip install --upgrade youtube_dl")
+                    updatedPrograms += "youtube-dl"
+                    break
+                elif youtube_ans in deny:
+                    sys.exit()
+                else:
+                    print("Invalid answer. Please try again.")
+    if b"dropbox" in output:
+        while True:
+            dropbox_ans = input("The dropbox module is outdated. Would you like to update the module?: \n" 
+                                "(reply with 'y' to update and 'n' to skip) \n")
+            dropbox_ans = dropbox_ans.lower()
+            if dropbox_ans in confirm:
+                os.system("pip install --upgrade dropbox")
+                updatedPrograms += " dropbox"
+                break
+            elif dropbox_ans in deny:
+                break
+            else:
+                print("Invalid answer. Please try again.")
+    if b"ffmpy" in output:
+        while True:
+            ffmpy_ans = input("The ffmpy module is outdated. Would you like to update the module?: \n" 
+                              "(reply with 'y' to update and 'n' to skip) \n")
+            ffmpy_ans = ffmpy_ans.lower()
+            if ffmpy_ans in confirm:
+                os.system("pip install --upgrade ffmpy")
+                updatedPrograms += " ffmpy"
+                break
+            elif ffmpy_ans in deny:
+                break
+            else:
+                print("Invalid answer. Please try again.")
+    if b"eyeD3" in output:
+         while True:
+            eyeD3_ans = input("The eyeD3 module is outdated. Would you like to update the module?: \n" 
+                              "(reply with 'y' to update and 'n' to skip) \n")
+            eyeD3_ans = eyeD3_ans.lower()
+            if eyeD3_ans in confirm:
+                os.system("pip install --upgrade eyeD3")
+                updatedPrograms += " eyeD3"
+                break
+            elif eyeD3_ans in deny:
+                break
+            else:
+                print("Invalid answer. Please try again.")
     return updatedPrograms
     
 '''
@@ -160,7 +223,7 @@ def getFFmpegDicts(dir,frontSlashTitles):
     vidDict = {}
     mp3Dict = {}
     if frontSlashTitles:
-        if sys.platform not in ('win32', 'cygwin'):
+        if sys.platform not in ("win32", "win64", "cygwin"):
             for file in frontSlashTitles:
                 fileCheck = movetoRoot(dir, file[:file.rfind('/')])
                 oldPath = os.path.join(dir, fileCheck[fileCheck.rfind('/') + 1:])
@@ -306,25 +369,27 @@ def main():
     if updated:
         
         print("\n----------------------------------------------------------------------------------------------")
-        print('Outdated modules have been found: ' + updated + ' \n Modules have been Updated! Resuming...')
+        print('The following modules have been updated: ' + updated + ' \n Resuming...')
         print("---------------------------------------------------------------------------------------------- \n")
         
     else:
         
         print("----------------------------------------------------------------------------------------------")
-        print('All modules are currently up-to-date! Resuming...')
+        print('All modules have been accounted for! Resuming...')
         print("---------------------------------------------------------------------------------------------- \n")
         
     while resume == True:  # Conversion process restarts if user wishes to resume converting
         while True:
-            clear()
-            compOrDropbox = input("Would you like to save the files to Dropbox or to a local directory?: \n (reply with 'd' for Dropbox and 'l' for local directory) \n")
+            compOrDropbox = input ("Would you like to save the files to Dropbox or to a local directory?: \n" 
+                                  "(reply with 'd' for Dropbox and 'l' for local directory) \n")
+            compOrDropbox = compOrDropbox.lower()
             #if compOrDropbox == 'd' or  compOrDropbox == 'D' or compOrDropbox == 'Dropbox' or compOrDropbox == 'dropbox' or  compOrDropbox == 'drop' or  compOrDropbox == 'Drop':
-            if compOrDropbox in ('d', 'D', 'Dropbox', 'dropbox', 'drop', 'Drop'):
+            if compOrDropbox in ('d', "dropbox", "drop"):
                 mp3ToDropbox = True
                 directory = os.getcwd()
                 while True:
-                    accToken = input("\n \n Please provide the access token given by the Dropbox API allowing access to the files: \n (Note: the token must be accurate or the file won't show up on your Dropbox account) \n")  # No Error Catching on access token
+                    accToken = input("\n \n Please provide the access token given by the Dropbox API allowing access to the files: \n"
+                                     "(Note: the token must be accurate or the file won't show up on your Dropbox account) \n")
                     if accToken:
                         try:
                             dbx = dropbox.Dropbox(accToken)
@@ -341,7 +406,7 @@ def main():
                     dbxDirectory = "/Public/Music Folder"
                     break
             #elif compOrDropbox == 'l' or compOrDropbox == 'local' or compOrDropbox == 'localdirectory' or compOrDropbox == 'local directory' or compOrDropbox == 'Local' or compOrDropbox == 'Localdirectory' or compOrDropbox == 'Local directory' or compOrDropbox == 'Local Directory':
-            elif compOrDropbox in ('l', "local", "localdirectory", "local directory", "Local", "Localdirectory", "LocalDirectory", "Local Directory"):
+            elif compOrDropbox in ('l', "local", "localdirectory", "local directory"):
                 while True:
                     directory = input("\n \n Please paste the path that you would like your music to be downloaded to: \n")
                     if directory:
@@ -380,7 +445,7 @@ def main():
                     print("Uploading MP3: " + music[0][:-4])
                     with open(music[0], 'rb') as f:
                         dbx.files_upload(f.read(),dbxDirectory + "/" +  music[0])
-            except dropbox.stone_validators.ValidationError:
+            except dropbox.stone_validators.ValidationError: # Late Error Catching on access token. Possible to confirm sooner?
                 print("Invalid Dropbox path. Please restart the script to try again.")
             except dropbox.exceptions.ApiError:
                 print("Duplicate MP3 files found in Dropbox file. If undesired, please delete the mp3 files, restart the script, and try again.")
@@ -394,11 +459,12 @@ def main():
 
         while True:
             resume = input("Would you like to resume converting Youtube Videos?: \n(reply with 'y' to continue and 'n' to quit)\n")
-            if resume in ('y', "yes", 'Y', "Yes", "YES"):
+            resume = resume.lower()
+            if resume in ('y', "yes"):
                 mp3ToDropbox = False
                 resume = True
                 break
-            elif resume in ('n', "no", 'N', "No", "NO"):
+            elif resume in ('n', "no"):
                 mp3ToDropbox = False
                 resume = False
                 break
