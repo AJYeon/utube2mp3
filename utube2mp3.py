@@ -10,19 +10,22 @@ from collections import OrderedDict
 
 
 try:
-    import youtube_dl  # pip install youtube_dl
+    # pip install youtube_dl
+    import youtube_dl
 except ImportError:
-    print("Please install the youtube_dl python package before proceeding,",
+    print("Please install the youtube_dl python package before proceeding, ",
           "otherwise the program will not function properly (pip install youtube_dl) \n")
     sys.exit()
 try:
-    import dropbox  # pip install dropbox
+    # pip install dropbox
+    import dropbox
 except ImportError:
-    print("Please install the dropbox python package before proceeding,",
+    print("Please install the dropbox python package before proceeding, ",
           "otherwise the program will not function properly (pip install dropbox) \n")
     sys.exit()
 try:
-    from ffmpy import FFmpeg  # pip install ffmpy + brew install FFmpeg
+    # pip install ffmpy + brew install FFmpeg
+    from ffmpy import FFmpeg
 except ImportError:
     print("Please install the ffmpy python package from brew before proceeding," ,
           "otherwise the program will not function properly \n" ,
@@ -30,11 +33,13 @@ except ImportError:
     sys.exit()
 
 try:
-    import eyed3  # pip install eyeD3 + pip install python-magic-bin==0.4.14
+    # pip install eyed3 + pip install python-magic-bin==0.4.14
+    # Note: Don't update eyed3, doesn't function as intended after ver. 0.8.10
+    import eyed3
 except ImportError:
-    print("Please install the eyeD3 python package before proceeding," , 
+    print("Please install the eyed3 python package before proceeding," , 
           "otherwise the program will not function properly \n" ,
-          "('pip install eyeD3' and then 'pip install python-magic-bin==0.4.14') \n")
+          "('pip install eyed3==0.8.10' and then 'pip install python-magic-bin==0.4.14') \n")
     sys.exit()
 
 
@@ -45,7 +50,8 @@ def clear():
     os.system("clear")
 
 '''
-Opens file containing readable local information and returns a list containing: Dropbox API key, Dropbox destination path, local destination path
+Opens file containing readable local information and returns a list containing: Dropbox API key, Dropbox destination path, 
+and local destination path
 ''' 
 def retrieveLocalInf():
     if os.path.isfile("local_inf"):
@@ -69,12 +75,13 @@ def updatePackages():
     deny = ('n', "no")
     if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
     # Checks if python is currently being run on a virtual environment
-        inVenv = True  
-    if b"youtube-dl" in output:  # CAUTION: Module is named "youtube_dl" but updateLog list names the module "youtube-dl"
+        inVenv = True
+    # CAUTION: Module is named "youtube_dl" but updateLog list names the module "youtube-dl"
+    if b"youtube-dl" in output:
         if inVenv:
             while True:
-                youtube_ans = input("youtube_dl is outdated and updating it is necessary to run. Would you like to update the module"  
-                                    "on your virtual environment?: \n" 
+                youtube_ans = input("youtube_dl is outdated and updating it is necessary to run. Would you like to update the " 
+                                    "module on your virtual environment?: \n" 
                                     "(reply with 'y' to update and 'n' to quit) \n")
                 youtube_ans = youtube_ans.lower()
                 if youtube_ans in confirm:
@@ -85,10 +92,12 @@ def updatePackages():
                     sys.exit()
                 else:
                      print("Invalid answer. Please try again.")
-        else: # (Non-virtual environment case) Might need to enter password if not admin
+        # (Non-virtual environment case) Might need to enter password if not admin
+        else: 
             while True:
-                youtube_ans = input("youtube_dl is outdated and updating it is necessary to run. Would you like to update the" 
-                                    "module?: \n (Note: Admin access is required! If prompted, you may need your computer's user password. \n" 
+                youtube_ans = input("youtube_dl is outdated and updating it is necessary to run. Would you like to update the " 
+                                    "module?: \n (Note: Admin access is required! If prompted, " 
+                                    "you may need your computer's user password. \n" 
                                     "reply with 'y' to update and 'n' to quit) \n")
                 if youtube_ans in confirm:
                     os.system("sudo -H pip install --upgrade youtube_dl")
@@ -124,33 +133,22 @@ def updatePackages():
                 break
             else:
                 print("Invalid answer. Please try again.")
-    if b"eyeD3" in output:
-         while True:
-            eyeD3_ans = input("The eyeD3 module is outdated. Would you like to update the module?: \n" 
-                              "(reply with 'y' to update and 'n' to skip) \n")
-            eyeD3_ans = eyeD3_ans.lower()
-            if eyeD3_ans in confirm:
-                os.system("pip install --upgrade eyeD3")
-                updatedPrograms += " eyeD3"
-                break
-            elif eyeD3_ans in deny:
-                break
-            else:
-                print("Invalid answer. Please try again.")
     return updatedPrograms
     
 '''
 Accepts a string containing a single block of text of  Youtube URL's and separates them into list elements
 '''
 def urlToList(linkString):
-    listString = ' '.join(linkString.split()) # If there are any spaces, eliminate them all
+    # If there are any spaces, eliminate them all
+    listString = ' '.join(linkString.split())
     strLength = len(listString)
     linkList = []
     while strLength > 0:
         firstPass = True
         currentLink = ""
         shaverIndex = 0
-        for character in enumerate(listString):  # Enumerate can get both index and character?
+        # Enumerate can get both index and character?
+        for character in enumerate(listString): 
             if listString[character[0]:int(character[0])+6] == 'https:':
                 if firstPass == False:
                     break
@@ -169,8 +167,9 @@ Calls a GET request on a given URL. Helper function to getTitle
 '''
 def requestGET(url): 
     try:
+        user = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
         headers = {}
-        headers['User-Agent'] =  "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
+        headers['User-Agent'] = user
         req = urllib.request.Request(url, headers = headers)
         resp = urllib.request.urlopen(req)
         respData = resp.read()
@@ -182,13 +181,15 @@ def requestGET(url):
 Retrieves the title of a Youtube video using GET request
 '''
 def getTitle(url):
-    strData = requestGET(url).decode()  # Converts Bytes-like Object into a decoded string
+    # Converts Bytes-like Object into a decoded string
+    strData = requestGET(url).decode()
     titleTag = "<title>"
     endOfTitle = "- YouTube"
     titleStartIndex = strData.find(titleTag) +7
     titleEndIndex = strData.find(endOfTitle) -1
     videoTitle = strData[titleStartIndex : titleEndIndex]
-    if len(videoTitle) > 100:  # The video doesn't have a proper title; Exceeded Youtube's 100 character limit
+    # The video doesn't have a proper title; Exceeded Youtube's 100 character limit
+    if len(videoTitle) > 100: 
         videoTitle = "N/A"
     return videoTitle
 
@@ -260,10 +261,13 @@ def getFFmpegDicts(dir,frontSlashTitles):
                 artList.append("")
             os.rename(os.path.join(dir, file), os.path.join(dir, newTitle))
             vidList.append((newTitle, None))
-            mp3String = newTitle[:newTitle.rfind('.')] + '.mp3'  # indexes the file extension of the video and replaces everything after and including the '.' with '.mp3'
-            mp3List.append((mp3String,"-map " + str(mapAccum) + ":1")) # additional parameters on top the mp3 file name
+            # indexes the file extension of the video and replaces everything after and including the '.' with '.mp3'
+            mp3String = newTitle[:newTitle.rfind('.')] + '.mp3'
+            # additional parameters on top the mp3 file name
+            mp3List.append((mp3String,"-map " + str(mapAccum) + ":1"))
             mapAccum += 1
-    vidDict = OrderedDict(vidList)  # Because Dictionaries stores keys and values in abritrary order, OrderedDict remembers the order saved 
+    # Because Dictionaries stores keys and values in abritrary order, OrderedDict remembers the order saved
+    vidDict = OrderedDict(vidList) 
     mp3Dict = OrderedDict(mp3List)  
     return(vidDict,mp3Dict,artList)
 
@@ -294,7 +298,8 @@ def setArtist(path,metadata,songs):
 Deletes all video files in a dictionary in the current working directory
 '''
 def deleteVideos(Dict):
-    for videos in Dict.items():  # Iteration over the key strings of the video dictionary
+    # Iteration over the key strings of the video dictionary
+    for videos in Dict.items():
         os.remove(videos[0])
 
 '''
@@ -305,24 +310,33 @@ def deleteMusic(Dict):
         os.remove(mp3[0])
 
 '''
-Main operator function that takes a list of Youtube URL's and a directory and downloads/converts the URL's to MP3 files into the directory
+Main operator function that takes a list of Youtube URL's and a directory 
+and downloads/converts the URL's to MP3 files into the directory
 '''
 def createMP3(linkList, dir):
-    savedCWD = os.getcwd()  # Saves the current working directory
+    # Saves the current working directory
+    savedCWD = os.getcwd()
     if dir != savedCWD:
-        os.chdir(dir)  # Changes the main directory to another location
+        # Changes the main directory to another location
+        os.chdir(dir)
     frontSlashList = []
     for url in enumerate(linkList):
         videoName = getTitle(url[1])
         if '&#39;' in videoName:
-            videoName = videoName.replace('&#39;',"'")  # Apostrophe in decimal
+            # Apostrophe in decimal
+            videoName = videoName.replace("&#39;","'") 
         if '&amp;' in videoName:
-            videoName = videoName.replace('&amp;','&')  # Ampersand in decimal
+            # Ampersand in decimal
+            videoName = videoName.replace("&amp;",'&')
+        if '&quot;' in videoName:
+            # Ampersand in decimal
+            videoName = videoName.replace("&quot;",'"')
         if '/' in videoName:
              frontSlashList.append(videoName)
              
         print("---------------------------------------------------------------------------------------------- \n")
-        print("Downloading Youtube videos " + str(url[0] + 1) + " out of " + str(len(linkList)) + "\n  (Title: " + videoName + ") \n")
+        print("Downloading Youtube videos " + str(url[0] + 1) + " out of " + str(len(linkList)) + "\n",  
+              "(Title: " + videoName + ") \n")
         print("---------------------------------------------------------------------------------------------- \n")
         videoDirectory = os.path.join(dir, videoName)
         print("videoDirectory: " + videoDirectory)
@@ -377,7 +391,7 @@ def main():
     if updated:
         
         print("\n----------------------------------------------------------------------------------------------")
-        print('The following modules have been updated: ' + updated + ' \n Resuming...')
+        print('The following modules have been updated: ' + updated + ' \nResuming...')
         print("---------------------------------------------------------------------------------------------- \n")
         
     else:
@@ -395,8 +409,8 @@ def main():
                 mp3ToDropbox = True
                 directory = os.getcwd()
                 while True:
-                    accToken = input("\n \n Please provide the access token given by the Dropbox API allowing access to the files: \n"
-                                     "(Note: the token must be accurate or the file won't show up on your Dropbox account) \n")
+                    accToken = input("\n \nPlease provide the Dropbox API access token: \n"
+                                     "(Note: the token must be accurate or the files can't access your Dropbox account) \n")
                     if accToken:
                         try:
                             dbx = dropbox.Dropbox(accToken)
@@ -412,13 +426,14 @@ def main():
                         else:
                             clear()
                             print("No access token was provided.")
-                dbxDirectory = input("\n \n Please provide the Dropbox directory where the .mp3 files will be placed in: \n (Note: The directory must be valid and precise. Otherwise, the program may not finish)\n")
+                dbxDirectory = input("\n \nPlease provide the Dropbox directory where the .mp3 files will be placed in: \n"
+                                     "(Note: The directory must be valid and precise. Otherwise, the program may not finish)\n")
                 if not dbxDirectory:
                     dbxDirectory = localInf[1]
                     break
             elif compOrDropbox in ('l', "local", "localdirectory", "local directory"):
                 while True:
-                    directory = input("\n \n Please paste the path that you would like your music to be downloaded to: \n")
+                    directory = input("\n \nPlease paste the path that you would like your music to be downloaded to: \n")
                     if directory:
                         if os.path.isdir(directory):
                             break
@@ -437,15 +452,17 @@ def main():
                 clear()
                 print("Invalid Input. Please try again. \n")
         while True:
-            unconvSongs = input("\n \n Please paste the URL's of the music that is to be converted: \n")
+            unconvSongs = input("\n \nPlease paste the URL's of the music that is to be converted: \n")
             mp3Dict = []
             if not unconvSongs:  # Empty string was provided
                 clear()
                 print("No URL's were provided.")
             else:
                 try:
-                    mp3Dict = createMP3(urlToList(unconvSongs),directory) # Executes the conversion process and returns a dictionary with the music that was converted
-                except AttributeError or not mp3Dict: # Error in parsing youtube URLs or one of the URL's were either unavailable or stricken with copyright grounds
+                    # Executes the conversion process and returns a dictionary with the music that was converted
+                    mp3Dict = createMP3(urlToList(unconvSongs),directory)
+                # Error in parsing youtube URLs or one of the URL's were either unavailable or stricken with copyright grounds
+                except AttributeError or not mp3Dict: 
                     clear()
                     print(" The Youtube URL's provided were invalid.")
                 else:
@@ -459,10 +476,12 @@ def main():
                     print("Uploading MP3: " + music[0][:-4])
                     with open(music[0], 'rb') as f:
                         dbx.files_upload(f.read(),dbxDirectory + "/" +  music[0])
-            except dropbox.stone_validators.ValidationError: # Late Error Catching on access token. Possible to confirm sooner?
+            # Late Error Catching on access token. Possible to confirm sooner?
+            except dropbox.stone_validators.ValidationError:
                 print("Invalid Dropbox path. Please restart the script to try again.")
             except dropbox.exceptions.ApiError:
-                print("Duplicate MP3 files found in Dropbox file. If undesired, please delete the mp3 files, restart the script, and try again.")
+                print("Duplicate MP3 files found in Dropbox file. ", 
+                      "If undesired, please delete the mp3 files, restart the script, and try again.")
             print("----------------------------------------------------------------------------------------------")
             print('Now Deleting MP3 Files Locally...')
             print("---------------------------------------------------------------------------------------------- \n")    
@@ -472,7 +491,8 @@ def main():
         print("---------------------------------------------------------------------------------------------- \n")
 
         while True:
-            resume = input("Would you like to resume converting Youtube Videos?: \n(reply with 'y' to continue and 'n' to quit)\n")
+            resume = input("Would you like to resume converting Youtube Videos?: \n"
+                           "(reply with 'y' to continue and 'n' to quit)\n")
             resume = resume.lower()
             if resume in ('y', "yes"):
                 mp3ToDropbox = False
