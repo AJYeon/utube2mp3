@@ -49,6 +49,18 @@ Clears all the text currently displayed on the terminal window and flushes the b
 def clear():
     os.system("clear")
 
+def printASCII():
+    print("----------------------------------------------------------------------------------------------")
+    print("  _      _  ________  _      _  ________  ________   ______   __       __  _______   ________ ")   
+    print(" | |    | ||__    __|| |    | ||   __   ||        | /  _   \ |  \     /  ||  ____ \ |_____   |")
+    print(" | |    | |   |  |   | |    | || |____|_||  ______||__/ /  | |   \   /   || |____| |     /  / ")
+    print(" | |    | |   |  |   | |    | ||      <_ | |______     /  /  |    \_/    ||   ____/     /  /  ")
+    print(" | |    | |   |  |   | |    | ||  ____  ||  ______|   /  /   |  |\   /|  ||  |         |_  \  ")
+    print(" | |    | |   |  |   | |    | || |    | || |______   /  /    |  | \_/ |  ||  |           \  \ ")
+    print(" | \____/ |   |  |   | \____/ || |____| ||        | /  /____ |  |     |  ||  |      /\____)  )")
+    print("  \______/    [__]    \______/ [________]|________||________||__|     |__||__|      \_______/ ")
+    print("---------------------------------------------------------------------------------------------- \n \n")
+    
 '''
 Opens file containing readable local information and returns a list containing: Dropbox API key, Dropbox destination path, 
 and local destination path
@@ -73,8 +85,8 @@ def updatePackages():
     inVenv = False
     confirm = ('y', "yes")
     deny = ('n', "no")
-    if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
     # Checks if python is currently being run on a virtual environment
+    if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
         inVenv = True
     # CAUTION: Module is named "youtube_dl" but updateLog list names the module "youtube-dl"
     if b"youtube-dl" in output:
@@ -134,6 +146,42 @@ def updatePackages():
             else:
                 print("Invalid answer. Please try again.")
     return updatedPrograms
+
+def checkAPI(token,localInf):
+    if token:
+        dbx = dropbox.Dropbox(token)
+        return dbx
+    else:
+        if localInf:
+            dbx = dropbox.Dropbox(localInf[0])
+            return dbx
+        else:
+            clear()
+            print("No access token was provided. Please provide an access token to continue.")
+            return None
+
+def checkDropboxPath(db,path,localInf):
+    if path:
+        try:
+            db.files_alpha_get_metadata(path)
+            return path
+        except dropbox.stone_validators.ValidationError:
+            clear()
+            print("Invalid Dropbox path was provided. Please provide an existing Dropbox directory to continue.")
+            valError = "VE"
+            return valError
+        except dropbox.exceptions.AuthError or dropbox.exceptions.BadInputError:
+            clear()
+            print("Invalid access token was provided. Please provide a proper access token to continue.")
+            badInError = "BIE"
+            return badInError
+    else:
+        if localInf:
+            return localInf[1]
+        else:
+            clear()
+            print("No path was provided. Please provide a proper Dropbox path to continue.")
+            return None
     
 '''
 Accepts a string containing a single block of text of  Youtube URL's and separates them into list elements
@@ -237,9 +285,9 @@ def getFFmpegDicts(dir,frontSlashTitles):
             for file in frontSlashTitles:
                 fileCheck = movetoRoot(dir, file[:file.rfind('/')])
                 oldPath = os.path.join(dir, fileCheck[fileCheck.rfind('/') + 1:])
+                # Titles with backslashes replaced with underscores. Possible to reapply the backslashes?
                 underscorePath =  os.path.join(dir, fileCheck.replace('/','_'))
                 os.rename(oldPath, underscorePath)
-                # Backslashes replaced with underscores. Possible to reapply the backslashes?
     musicDirectory = os.listdir(dir)
     vidList = []
     mp3List = []
@@ -286,7 +334,6 @@ Removes the artist's name from the title and places it in the song's tag instead
 '''
 def setArtist(path,metadata,songs):
     index = 0
-    #print(songs)
     for entry in songs.items():
         songPath = os.path.join(path, entry[0])
         audioFile = eyed3.load(songPath)
@@ -361,24 +408,15 @@ def createMP3(linkList, dir):
     print("Now Deleting Videos...")
     print("---------------------------------------------------------------------------------------------- \n")
     
-    deleteVideos(videoDict)            
-    os.chdir(savedCWD)  # Reverts the main directory back
+    deleteVideos(videoDict)
+    # Reverts the main directory back
+    os.chdir(savedCWD)  
     return musicDict
 
 
 def main():
+    printASCII()
     
-    print("----------------------------------------------------------------------------------------------")
-    print("  _      _  ________  _      _  ________  ________   ______   __       __  _______   ________ ")   
-    print(" | |    | ||__    __|| |    | ||   __   ||        | /  _   \ |  \     /  ||  ____ \ |_____   |")
-    print(" | |    | |   |  |   | |    | || |____|_||  ______||__/ /  | |   \   /   || |____| |     /  / ")
-    print(" | |    | |   |  |   | |    | ||      <_ | |______     /  /  |    \_/    ||   ____/     /  /  ")
-    print(" | |    | |   |  |   | |    | ||  ____  ||  ______|   /  /   |  |\   /|  ||  |         |_  \  ")
-    print(" | |    | |   |  |   | |    | || |    | || |______   /  /    |  | \_/ |  ||  |           \  \ ")
-    print(" | \____/ |   |  |   | \____/ || |____| ||        | /  /____ |  |     |  ||  |      /\____)  )")
-    print("  \______/    [__]    \______/ [________]|________||________||__|     |__||__|      \_______/ ")
-    print("---------------------------------------------------------------------------------------------- \n \n")
-
     mp3ToDropbox = False
     resume = True
     localInf = retrieveLocalInf()
@@ -397,40 +435,45 @@ def main():
     else:
         
         print("----------------------------------------------------------------------------------------------")
-        print('All modules have been accounted for! Resuming...')
+        print('All modules have been accounted for! \nResuming...')
         print("---------------------------------------------------------------------------------------------- \n")
         
-    while resume == True:  # Conversion process restarts if user wishes to resume converting
+    # Conversion process restarts if user wishes to resume converting
+    while resume == True:
+        # Dropbox or Local Directory input loop
         while True:
             compOrDropbox = input ("Would you like to save the files to Dropbox or to a local directory?: \n" 
-                                  "(reply with 'd' for Dropbox and 'l' for local directory) \n")
-            compOrDropbox = compOrDropbox.lower()
+                                  "(reply with 'd' for Dropbox and 'l' for local directory) \n").lower()
             if compOrDropbox in ('d', "dropbox", "drop"):
                 mp3ToDropbox = True
                 directory = os.getcwd()
                 while True:
-                    accToken = input("\n \nPlease provide the Dropbox API access token: \n"
-                                     "(Note: the token must be accurate or the files can't access your Dropbox account) \n")
-                    if accToken:
-                        try:
-                            dbx = dropbox.Dropbox(accToken)
-                        except (rest.ErrorResponse, e):
-                            clear()
-                            print('Error: %s' % (e,))
-                        else:
-                            break  
-                    else:
-                        if localInf:
-                            dbx = dropbox.Dropbox(localInf[0])
+                    # Dropbox API access token input loop
+                    while True:
+                        accToken = input("\n \nPlease provide the Dropbox API access token: \n"
+                                         "(Note: the token must be accurate or the files can't access your Dropbox account) \n")
+                        dbx = checkAPI(accToken,localInf)
+                        if dbx:
                             break
+                    retypeToken = False
+                    # Dropbox directory input loop
+                    while True:
+                        dbxDirectory = input("\n \nPlease provide the Dropbox directory where the .mp3 files will be placed in: \n"
+                                        "(Note: The directory must be valid and precise. Otherwise, the program may not finish)\n")
+                        pathExists = checkDropboxPath(dbx,dbxDirectory,localInf)
+                        # Validation Error. The Dropbox path was invalid. Returns to beginning of Dropbox directory loop.
+                        if pathExists == "VE":
+                            pass
+                        # Bad Input Error. The access token was invalid. Returns to beginning of API access token loop.
+                        elif pathExists == "BIE":
+                            retypeToken = True
+                            break
+                        # The Dropbox directory was valid and was able to have its metadata retrieved.
                         else:
-                            clear()
-                            print("No access token was provided.")
-                dbxDirectory = input("\n \nPlease provide the Dropbox directory where the .mp3 files will be placed in: \n"
-                                     "(Note: The directory must be valid and precise. Otherwise, the program may not finish)\n")
-                if not dbxDirectory:
-                    dbxDirectory = localInf[1]
-                    break
+                            break    
+                    if retypeToken == False:
+                        break
+                break 
             elif compOrDropbox in ('l', "local", "localdirectory", "local directory"):
                 while True:
                     directory = input("\n \nPlease paste the path that you would like your music to be downloaded to: \n")
@@ -454,7 +497,8 @@ def main():
         while True:
             unconvSongs = input("\n \nPlease paste the URL's of the music that is to be converted: \n")
             mp3Dict = []
-            if not unconvSongs:  # Empty string was provided
+            # Empty string was provided
+            if not unconvSongs:  
                 clear()
                 print("No URL's were provided.")
             else:
@@ -473,12 +517,10 @@ def main():
             print("---------------------------------------------------------------------------------------------- \n")
             try:
                 for music in mp3Dict.items():
+                    # the last 4 indices contain the ".mp3" file extension, removed for presentation
                     print("Uploading MP3: " + music[0][:-4])
                     with open(music[0], 'rb') as f:
                         dbx.files_upload(f.read(),dbxDirectory + "/" +  music[0])
-            # Late Error Catching on access token. Possible to confirm sooner?
-            except dropbox.stone_validators.ValidationError:
-                print("Invalid Dropbox path. Please restart the script to try again.")
             except dropbox.exceptions.ApiError:
                 print("Duplicate MP3 files found in Dropbox file. ", 
                       "If undesired, please delete the mp3 files, restart the script, and try again.")
