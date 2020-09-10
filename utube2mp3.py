@@ -71,8 +71,10 @@ def retrieveLocalInf():
         contents = f.read()
         information = contents.splitlines()
         f.close()
+        print("Local_inf data found! \n")
         return information
     else:
+        print("Local_inf data not found. Resuming... \nl")
         return False
  
 '''
@@ -188,7 +190,9 @@ Accepts a string containing a single block of text of  Youtube URL's and separat
 '''
 def urlToList(linkString):
     # If there are any spaces, eliminate them all
-    listString = ' '.join(linkString.split())
+    escapedString = linkString.replace('\r','\\r').replace('\n','\\n').replace('\t','\\t')
+    listString = ' '.join(escapedString.split())
+    print('\n LISTSTRING: ' + listString)
     strLength = len(listString)
     linkList = []
     while strLength > 0:
