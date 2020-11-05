@@ -515,7 +515,7 @@ def main():
                     print(" The Youtube URL's provided were invalid.")
                 else:
                     break
-        if mp3ToDropbox:
+        if mp3ToDropbox and mp3Dict != None:
             print("----------------------------------------------------------------------------------------------")
             print('Now Transfering files to Dropbox...')
             print("---------------------------------------------------------------------------------------------- \n")
