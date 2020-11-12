@@ -12,6 +12,7 @@ from collections import OrderedDict
 try:
     # pip install youtube_dl
     import youtube_dl
+    # help(yt) # documentation for youtube_dl
 except ImportError:
     print("Please install the youtube_dl python package before proceeding, ",
           "otherwise the program will not function properly (pip install youtube_dl) \n")
@@ -249,7 +250,8 @@ def getTitle(url):
 Passes a Youtube URL into youtube_dl and exports the video file to outDirectory
 '''
 def urlToVideo(url,outDirectory):
-    ydl_opts = {'outtmpl': outDirectory}
+    ydl_opts = {'outtmpl': outDirectory, 'rejecttitle': 'True', 'nooverwrites': 'True', 'noplaylist': 'True'}
+    #'quiet': True # do not print messages to stdout
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
         try:
             ydl.download([url])
@@ -329,7 +331,8 @@ def getFFmpegDicts(dir,frontSlashTitles):
 Runs FFmpeg on the given dictionary of video files and creates music files with the given output dictionary
 '''
 def videosToMp3(inputDict, outputDict):
-    ff = FFmpeg(inputs = inputDict , outputs = outputDict)
+    ff = FFmpeg(inputs = inputDict , outputs = outputDict, global_options='-y') 
+    # -n (global option): Do not overwrite output files, and exit immediately if a specified output file already exists
     ff.cmd
     ff.run()
     
