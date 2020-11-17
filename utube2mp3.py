@@ -426,25 +426,41 @@ def main():
     
     mp3ToDropbox = False
     resume = True
+    updateLoop = True
     localInf = retrieveLocalInf()
     
-    print("----------------------------------------------------------------------------------------------")
-    print('Checking for Module Updates...')
-    print("---------------------------------------------------------------------------------------------- \n")
-    
-    updated = updatePackages()
-    if updated:
-        
-        print("\n----------------------------------------------------------------------------------------------")
-        print('The following modules have been updated: ' + updated + ' \nResuming...')
-        print("---------------------------------------------------------------------------------------------- \n")
-        
-    else:
-        
-        print("----------------------------------------------------------------------------------------------")
-        print('All modules have been accounted for! \nResuming...')
-        print("---------------------------------------------------------------------------------------------- \n")
-        
+    #Loop for user input on whether modules should be updated or not
+    while updateLoop == True: 
+        updateCheck = input("Would you like to check for module updates? \n"
+                            "(reply with 'y' to check or 'n' to continue) \n")
+        if updateCheck in ('y', "yes"):
+            print("----------------------------------------------------------------------------------------------")
+            print('Checking for Module Updates...')
+            print("---------------------------------------------------------------------------------------------- \n")
+            
+            updated = updatePackages()
+            if updated:
+                
+                print("\n----------------------------------------------------------------------------------------------")
+                print('The following modules have been updated: ' + updated + ' \nResuming...')
+                print("---------------------------------------------------------------------------------------------- \n")
+                break
+                
+            else:
+                
+                print("----------------------------------------------------------------------------------------------")
+                print('All modules have been accounted for! \nResuming...')
+                print("---------------------------------------------------------------------------------------------- \n")
+                break
+        elif updateCheck in ('n', "no"):
+            print("----------------------------------------------------------------------------------------------")
+            print('Resuming...')
+            print("---------------------------------------------------------------------------------------------- \n")
+            break
+        else:
+            clear()
+            print("No option was provided. \n")
+            
     # Conversion process restarts if user wishes to resume converting
     while resume == True:
         # Dropbox or Local Directory input loop
