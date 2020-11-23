@@ -2,11 +2,14 @@
 Created by Andrew Yeon on July 17, 2018
 """
 
-import urllib.request
+import urllib
+import requests
 import os
 import sys
 import subprocess as sp
 from collections import OrderedDict
+from socket import gaierror
+
 
 
 try:
@@ -61,7 +64,37 @@ def printASCII():
     print(" | \____/ |   |  |   | \____/ || |____| ||        | /  /____ |  |     |  ||  |      /\____)  )")
     print("  \______/    [__]    \______/ [________]|________||________||__|     |__||__|      \_______/ ")
     print("---------------------------------------------------------------------------------------------- \n \n")
-    
+
+'''
+Calls a GET request on a given URL. Helper function to getTitle and checkInternetConnection
+'''
+def requestGET(url): 
+    try:
+        user = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
+        headers = {}
+        headers['User-Agent'] = user
+        req = urllib.request.Request(url, headers = headers)
+        resp = urllib.request.urlopen(req)
+        respData = resp.read()
+        return respData
+    # the 'from None' lines eliminate duplication of 'another exception occurred' lines, cleaning up output 
+    except gaierror as e:
+        clear()
+        raise Exception("The following connection error has been spotted. \n" + str(e) + 
+                        "\n Please establish an internet connection first. \nExiting...") from None 
+    except urllib.error.URLError as e:
+        clear()
+        raise Exception("The following connection error has been spotted. \n" + str(e) + 
+                        "\n Please establish an internet connection first. \nExiting...") from None
+
+'''
+Calls requestGET with some test URL to check internet connectivity. Error-catching helper function.
+'''
+def checkInternetConnection():
+    testURL = 'https://pypi.org/simple'
+    #requestGET will handle any internet connectivity issues, returning here means connection was established
+    requestGET(testURL) 
+
 '''
 Opens file containing readable local information and returns a list containing: Dropbox API key, Dropbox destination path, 
 and local destination path
@@ -83,7 +116,9 @@ Checks all outdated python modules needed for the running of this program and up
 '''  
 def updatePackages():
     updatedPrograms = ''
+    checkInternetConnection()
     updateLog = sp.Popen(["pip list --outdated"], shell=True, stdout=sp.PIPE)
+    ##WORK RIGHT HERE, ABOVE KEEPS GOING AND ISN'T TREATED AS AN ERROR
     output = updateLog.communicate()[0]
     inVenv = False
     confirm = ('y', "yes")
@@ -164,6 +199,7 @@ def checkAPI(token,localInf):
             return None
 
 def checkDropboxPath(db,path,localInf):
+    checkInternetConnection()
     if path:
         try:
             db.files_alpha_get_metadata(path)
@@ -173,7 +209,12 @@ def checkDropboxPath(db,path,localInf):
             print("Invalid Dropbox path was provided. Please provide an existing Dropbox directory to continue.")
             valError = "VE"
             return valError
-        except dropbox.exceptions.AuthError or dropbox.exceptions.BadInputError:
+        except dropbox.exceptions.AuthError:
+            clear()
+            print("Invalid access token was provided. Please provide a proper access token to continue.")
+            badATError = "AUT"
+            return badATError
+        except dropbox.exceptions.BadInputError:
             clear()
             print("Invalid access token was provided. Please provide a proper access token to continue.")
             badInError = "BIE"
@@ -215,21 +256,6 @@ def urlToList(linkString):
     return linkList
 
 
-'''
-Calls a GET request on a given URL. Helper function to getTitle
-'''
-def requestGET(url): 
-    try:
-        user = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
-        headers = {}
-        headers['User-Agent'] = user
-        req = urllib.request.Request(url, headers = headers)
-        resp = urllib.request.urlopen(req)
-        respData = resp.read()
-        return respData
-    except Exception as e:
-        print(str(e))
-
 '''        
 Retrieves the title of a Youtube video using GET request
 '''
@@ -250,6 +276,7 @@ def getTitle(url):
 Passes a Youtube URL into youtube_dl and exports the video file to outDirectory
 '''
 def urlToVideo(url,outDirectory):
+    checkInternetConnection()
     ydl_opts = {'outtmpl': outDirectory, 'rejecttitle': 'True', 'nooverwrites': 'True', 'noplaylist': 'True'}
     #'quiet': True # do not print messages to stdout
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
@@ -445,7 +472,6 @@ def main():
                 print('The following modules have been updated: ' + updated + ' \nResuming...')
                 print("---------------------------------------------------------------------------------------------- \n")
                 break
-                
             else:
                 
                 print("----------------------------------------------------------------------------------------------")
@@ -488,7 +514,7 @@ def main():
                         if pathExists == "VE":
                             pass
                         # Bad Input Error. The access token was invalid. Returns to beginning of API access token loop.
-                        elif pathExists == "BIE":
+                        elif pathExists == "BIE" or pathExists == "AUT":
                             retypeToken = True
                             break
                         # The Dropbox directory was valid and was able to have its metadata retrieved.
@@ -538,6 +564,7 @@ def main():
             print("----------------------------------------------------------------------------------------------")
             print('Now Transfering files to Dropbox...')
             print("---------------------------------------------------------------------------------------------- \n")
+            checkInternetConnection()
             try:
                 for music in mp3Dict.items():
                     # the last 4 indices contain the ".mp3" file extension, removed for presentation
