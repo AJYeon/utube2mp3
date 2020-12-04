@@ -165,11 +165,10 @@ def updatePackages():
     # Note: Don't update eyed3, doesn't function as intended after ver. 0.8.10
     return updatedPrograms
 
-def checkAPI(token,localInf):
+def createDropboxRequest(token,localInf):
     if token:
         dbx = dropbox.Dropbox(token)
         return dbx
-    #handle DBX API Token error here
     else:
         if localInf:
             dbx = dropbox.Dropbox(localInf[0])
@@ -487,7 +486,7 @@ def main():
                     while not dbx:
                         accToken = input("\n \nPlease provide the Dropbox API access token: \n"
                                          "(Note: the token must be accurate or the files can't access your Dropbox account) \n")
-                        dbx = checkAPI(accToken,localInf)
+                        dbx = createDropboxRequest(accToken,localInf)
                     retypeToken = False
                     # Dropbox directory input loop
                     while validDropboxDirectory == False:
@@ -553,6 +552,9 @@ def main():
             print('Now Transfering files to Dropbox...')
             print("---------------------------------------------------------------------------------------------- \n")
             checkInternetConnection()
+            if not dbxDirectory:
+                # If input for Dropbox directory is an empty string and local_inf exists, then set local_inf path as default Dropbox path 
+                dbxDirectory = pathExists
             try:
                 for music in mp3Dict.items():
                     # the last 4 indices contain the ".mp3" file extension, removed for presentation
