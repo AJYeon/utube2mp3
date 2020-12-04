@@ -10,40 +10,20 @@ import subprocess as sp
 from collections import OrderedDict
 from socket import gaierror
 
-
-
+currentErrorMess = ''
 try:
-    # pip install youtube_dl
-    import youtube_dl
     # help(yt) # documentation for youtube_dl
-except ImportError:
-    print("Please install the youtube_dl python package before proceeding, ",
-          "otherwise the program will not function properly (pip install youtube_dl) \n")
-    sys.exit()
-try:
-    # pip install dropbox
+    currentErrorMess = '(pip install youtube_dl)'
+    import youtube_dl
+    currentErrorMess = '(pip install dropbox)'
     import dropbox
-except ImportError:
-    print("Please install the dropbox python package before proceeding, ",
-          "otherwise the program will not function properly (pip install dropbox) \n")
-    sys.exit()
-try:
-    # pip install ffmpy + brew install FFmpeg
+    currentErrorMess = "('brew install FFmpeg' and then 'pip install ffmpy')"
     from ffmpy import FFmpeg
-except ImportError:
-    print("Please install the ffmpy python package from brew before proceeding," ,
-          "otherwise the program will not function properly \n" ,
-          "('brew install FFmpeg' and then 'pip install ffmpy') \n")
-    sys.exit()
-
-try:
-    # pip install eyed3 + pip install python-magic-bin==0.4.14
-    # Note: Don't update eyed3, doesn't function as intended after ver. 0.8.10
+    currentErrorMess = "('pip install eyed3==0.8.10' and then 'pip install python-magic-bin==0.4.14')"
     import eyed3
 except ImportError:
-    print("Please install the eyed3 python package before proceeding," , 
-          "otherwise the program will not function properly \n" ,
-          "('pip install eyed3==0.8.10' and then 'pip install python-magic-bin==0.4.14') \n")
+    raise Exception("Please install the following python package before proceeding, ",
+          "otherwise the program will not function properly: " + currentErrorMess + "\n") from None
     sys.exit()
 
 
@@ -118,7 +98,6 @@ def updatePackages():
     updatedPrograms = ''
     checkInternetConnection()
     updateLog = sp.Popen(["pip list --outdated"], shell=True, stdout=sp.PIPE)
-    ##WORK RIGHT HERE, ABOVE KEEPS GOING AND ISN'T TREATED AS AN ERROR
     output = updateLog.communicate()[0]
     inVenv = False
     confirm = ('y', "yes")
@@ -183,12 +162,14 @@ def updatePackages():
                 break
             else:
                 print("Invalid answer. Please try again.")
+    # Note: Don't update eyed3, doesn't function as intended after ver. 0.8.10
     return updatedPrograms
 
 def checkAPI(token,localInf):
     if token:
         dbx = dropbox.Dropbox(token)
         return dbx
+    #handle DBX API Token error here
     else:
         if localInf:
             dbx = dropbox.Dropbox(localInf[0])
@@ -495,33 +476,34 @@ def main():
                                   "(reply with 'd' for Dropbox and 'l' for local directory) \n").lower()
             if compOrDropbox in ('d', "dropbox", "drop"):
                 mp3ToDropbox = True
+                retypeToken = True
+                validDropboxDirectory = False
+                dbx = False
+                #Used for createMP3 method
                 directory = os.getcwd()
-                while True:
+                #Main Dropbox Path Loop. Returns here if access token is invalid
+                while retypeToken == True:
                     # Dropbox API access token input loop
-                    while True:
+                    while not dbx:
                         accToken = input("\n \nPlease provide the Dropbox API access token: \n"
                                          "(Note: the token must be accurate or the files can't access your Dropbox account) \n")
                         dbx = checkAPI(accToken,localInf)
-                        if dbx:
-                            break
                     retypeToken = False
                     # Dropbox directory input loop
-                    while True:
+                    while validDropboxDirectory == False:
                         dbxDirectory = input("\n \nPlease provide the Dropbox directory where the .mp3 files will be placed in: \n"
                                         "(Note: The directory must be valid and precise. Otherwise, the program may not finish)\n")
                         pathExists = checkDropboxPath(dbx,dbxDirectory,localInf)
-                        # Validation Error. The Dropbox path was invalid. Returns to beginning of Dropbox directory loop.
+                        # Validation Error. The Dropbox path was invalid. Returns to beginning of Dropbox directory input loop.
                         if pathExists == "VE":
                             pass
-                        # Bad Input Error. The access token was invalid. Returns to beginning of API access token loop.
+                        # Bad Input Error. The access token was invalid. Returns to beginning of Main Dropbox Path loop.
                         elif pathExists == "BIE" or pathExists == "AUT":
                             retypeToken = True
-                            break
+                            validDropboxDirectory = True
                         # The Dropbox directory was valid and was able to have its metadata retrieved.
                         else:
-                            break    
-                    if retypeToken == False:
-                        break
+                            validDropboxDirectory = True   
                 break 
             elif compOrDropbox in ('l', "local", "localdirectory", "local directory"):
                 while True:
@@ -543,6 +525,7 @@ def main():
             else:
                 clear()
                 print("Invalid Input. Please try again. \n")
+        # Youtube URL input loop
         while True:
             unconvSongs = input("\n \nPlease paste the URL's of the music that is to be converted: \n")
             mp3Dict = []
@@ -555,11 +538,16 @@ def main():
                     # Executes the conversion process and returns a dictionary with the music that was converted
                     mp3Dict = createMP3(urlToList(unconvSongs),directory)
                 # Error in parsing youtube URLs or one of the URL's were either unavailable or stricken with copyright grounds
-                except AttributeError or not mp3Dict: 
+                except AttributeError: 
                     clear()
                     print(" The Youtube URL's provided were invalid.")
                 else:
-                    break
+                    # CreateMP3 returns with no value due to some Youtube URL error. Goes back to Youtube URL input loop
+                    if not mp3Dict:
+                        clear()
+                        print(" The Youtube URL's provided were invalid.")
+                    else:
+                        break
         if mp3ToDropbox and mp3Dict != None:
             print("----------------------------------------------------------------------------------------------")
             print('Now Transfering files to Dropbox...')
