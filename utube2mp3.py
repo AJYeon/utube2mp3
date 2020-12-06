@@ -3,7 +3,6 @@ Created by Andrew Yeon on July 17, 2018
 """
 
 import urllib
-import requests
 import os
 import sys
 import subprocess as sp
@@ -24,7 +23,6 @@ try:
 except ImportError:
     raise Exception("Please install the following python package before proceeding, ",
           "otherwise the program will not function properly: " + currentErrorMess + "\n") from None
-    sys.exit()
 
 
 '''
@@ -358,7 +356,7 @@ def setArtist(path,metadata,songs):
 '''
 Deletes all video files in a dictionary in the current working directory
 '''
-def deleteVideos(Dict):
+def deleteVideos(Dict = None):
     # Iteration over the key strings of the video dictionary
     for videos in Dict.items():
         os.remove(videos[0])
@@ -375,6 +373,20 @@ Main operator function that takes a list of Youtube URL's and a directory
 and downloads/converts the URL's to MP3 files into the directory
 '''
 def createMP3(linkList, dir):
+    #DO SOMETHING WITHA THIS, and make sure to put the deleteMusic method over to handle after the error
+    # Error in parsing youtube URLs or one of the URL's were either unavailable or stricken with copyright grounds
+    """
+    except AttributeError: 
+        clear()
+        print(" The Youtube URL's provided were invalid.")
+    else:
+        # CreateMP3 returns with no value due to some Youtube URL error. Goes back to Youtube URL input loop
+        if not mp3Dict:
+            clear()
+            print(" The Youtube URL's provided were invalid.")
+    """
+    
+    
     # Saves the current working directory
     savedCWD = os.getcwd()
     if dir != savedCWD:
@@ -433,11 +445,12 @@ def main():
     
     mp3ToDropbox = False
     resume = True
-    updateLoop = True
+    modulesUpdated = False
+    createdMP3 = False
     localInf = retrieveLocalInf()
     
     #Loop for user input on whether modules should be updated or not
-    while updateLoop == True: 
+    while modulesUpdated == False: 
         updateCheck = input("Would you like to check for module updates? \n"
                             "(reply with 'y' to check or 'n' to continue) \n")
         if updateCheck in ('y', "yes"):
@@ -447,22 +460,20 @@ def main():
             
             updated = updatePackages()
             if updated:
-                
                 print("\n----------------------------------------------------------------------------------------------")
                 print('The following modules have been updated: ' + updated + ' \nResuming...')
                 print("---------------------------------------------------------------------------------------------- \n")
-                break
+                modulesUpdated = True
             else:
-                
                 print("----------------------------------------------------------------------------------------------")
                 print('All modules have been accounted for! \nResuming...')
                 print("---------------------------------------------------------------------------------------------- \n")
-                break
+                modulesUpdated = True
         elif updateCheck in ('n', "no"):
             print("----------------------------------------------------------------------------------------------")
             print('Resuming...')
             print("---------------------------------------------------------------------------------------------- \n")
-            break
+            modulesUpdated = True
         else:
             clear()
             print("No option was provided. \n")
@@ -525,7 +536,7 @@ def main():
                 clear()
                 print("Invalid Input. Please try again. \n")
         # Youtube URL input loop
-        while True:
+        while createdMP3 == False:
             unconvSongs = input("\n \nPlease paste the URL's of the music that is to be converted: \n")
             mp3Dict = []
             # Empty string was provided
@@ -533,20 +544,12 @@ def main():
                 clear()
                 print("No URL's were provided.")
             else:
-                try:
-                    # Executes the conversion process and returns a dictionary with the music that was converted
-                    mp3Dict = createMP3(urlToList(unconvSongs),directory)
-                # Error in parsing youtube URLs or one of the URL's were either unavailable or stricken with copyright grounds
-                except AttributeError: 
-                    clear()
-                    print(" The Youtube URL's provided were invalid.")
-                else:
-                    # CreateMP3 returns with no value due to some Youtube URL error. Goes back to Youtube URL input loop
-                    if not mp3Dict:
-                        clear()
-                        print(" The Youtube URL's provided were invalid.")
-                    else:
-                        break
+                # Executes the conversion process and returns a dictionary with the music that was converted
+                mp3Dict = createMP3(urlToList(unconvSongs),directory)
+                # mp3Dict came back with no errors. Continue to Dropbox transfer portion
+                if mp3Dict:
+                    createdMP3 == True
+
         if mp3ToDropbox and mp3Dict != None:
             print("----------------------------------------------------------------------------------------------")
             print('Now Transfering files to Dropbox...')
