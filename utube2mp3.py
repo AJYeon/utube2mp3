@@ -256,7 +256,7 @@ Passes a Youtube URL into youtube_dl and exports the video file to outDirectory
 def urlToVideo(url,outDirectory):
     checkInternetConnection()
     ydl_opts = {'outtmpl': outDirectory, 'rejecttitle': 'True', 'nooverwrites': 'True', 'noplaylist': 'True'}
-    #'quiet': True # do not print messages to stdout
+    # 'quiet': True # do not print messages to stdout
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
         try:
             ydl.download([url])
@@ -267,6 +267,10 @@ def urlToVideo(url,outDirectory):
         except youtube_dl.utils.UnavailableVideoError:
             clear()
             print("UnavailableVideoError: The video is currently unavailable")
+            return False
+        except AttributeError: 
+            clear()
+            print(" The Youtube URL's provided were invalid.")
             return False
     
 '''      
@@ -291,14 +295,17 @@ Accepts a directory of video files and returns boilerplate dictionaries of the f
 def getFFmpegDicts(dir,frontSlashTitles):
     vidDict = {}
     mp3Dict = {}
-    if frontSlashTitles:
+    print(frontSlashTitles)
+    if frontSlashTitles['FSFileExists'] == True:
         if sys.platform not in ("win32", "win64", "cygwin"):
             for file in frontSlashTitles:
-                fileCheck = movetoRoot(dir, file[:file.rfind('/')])
-                oldPath = os.path.join(dir, fileCheck[fileCheck.rfind('/') + 1:])
-                # Titles with backslashes replaced with underscores. Possible to reapply the backslashes?
-                underscorePath =  os.path.join(dir, fileCheck.replace('/','_'))
-                os.rename(oldPath, underscorePath)
+                #Title had front flash in it
+                if frontSlashTitles[file] == True and file != 'FSFileExists':
+                    fileCheck = movetoRoot(dir, file[:file.rfind('/')])
+                    oldPath = os.path.join(dir, fileCheck[fileCheck.rfind('/') + 1:])
+                    # Titles with backslashes replaced with underscores. Possible to reapply the backslashes?
+                    underscorePath =  os.path.join(dir, fileCheck.replace('/','_'))
+                    os.rename(oldPath, underscorePath)
     musicDirectory = os.listdir(dir)
     vidList = []
     mp3List = []
@@ -354,45 +361,26 @@ def setArtist(path,metadata,songs):
         index += 1
 
 '''
-Deletes all video files in a dictionary in the current working directory
+Deletes all video, video segment, or music files in a dictionary in the current working directory
 '''
-def deleteVideos(Dict = None):
+def deleteItems(dict):
     # Iteration over the key strings of the video dictionary
-    for videos in Dict.items():
-        os.remove(videos[0])
+    for file in dict.items():
+        os.remove(file[0])
 
-'''
-Deletes all music files in a dictionary in the current working directory
-'''
-def deleteMusic(Dict):
-    for mp3 in Dict.items(): 
-        os.remove(mp3[0])
 
 '''
 Main operator function that takes a list of Youtube URL's and a directory 
 and downloads/converts the URL's to MP3 files into the directory
 '''
 def createMP3(linkList, dir):
-    #DO SOMETHING WITHA THIS, and make sure to put the deleteMusic method over to handle after the error
-    # Error in parsing youtube URLs or one of the URL's were either unavailable or stricken with copyright grounds
-    """
-    except AttributeError: 
-        clear()
-        print(" The Youtube URL's provided were invalid.")
-    else:
-        # CreateMP3 returns with no value due to some Youtube URL error. Goes back to Youtube URL input loop
-        if not mp3Dict:
-            clear()
-            print(" The Youtube URL's provided were invalid.")
-    """
-    
-    
     # Saves the current working directory
     savedCWD = os.getcwd()
     if dir != savedCWD:
         # Changes the main directory to another location
         os.chdir(dir)
-    frontSlashList = []
+    # the 0th item in the dict is updated if any of the files in linkList have a front slash in the file name
+    frontSlashDict = {'FSFileExists': False}
     for url in enumerate(linkList):
         videoName = getTitle(url[1])
         if '&#39;' in videoName:
@@ -405,8 +393,10 @@ def createMP3(linkList, dir):
             # Ampersand in decimal
             videoName = videoName.replace("&quot;",'"')
         if '/' in videoName:
-             frontSlashList.append(videoName)
-             
+            frontSlashDict['FSFileExists'] = True
+            frontSlashDict[videoName] = True
+        else:
+            frontSlashDict[videoName] = False
         print("---------------------------------------------------------------------------------------------- \n")
         print("Downloading Youtube videos " + str(url[0] + 1) + " out of " + str(len(linkList)) + "\n",  
               "(Title: " + videoName + ") \n")
@@ -415,8 +405,16 @@ def createMP3(linkList, dir):
         print("videoDirectory: " + videoDirectory)
         extractCheck = urlToVideo(url[1],videoDirectory)
         if extractCheck == False:
+            currentDirectoryState = os.listdir(dir)
+            toDelete = []
+            for file in currentDirectoryState:
+                # checks if the file being observed has the same name as the video title.
+                # Excluding the FSFileExists Boolean. If so, prepare to delete it.
+                if file.startswith(tuple(frontSlashDict.keys())[1:]):
+                    toDelete.append(file)
+            deleteItems(toDelete)
             return
-    videoDict,musicDict,artistList = getFFmpegDicts(dir,frontSlashList)
+    videoDict,musicDict,artistList = getFFmpegDicts(dir,frontSlashDict)
     
     print("---------------------------------------------------------------------------------------------- ")
     print('Now Converting videos to MP3...')
@@ -434,7 +432,7 @@ def createMP3(linkList, dir):
     print("Now Deleting Videos...")
     print("---------------------------------------------------------------------------------------------- \n")
     
-    deleteVideos(videoDict)
+    deleteItems(videoDict)
     # Reverts the main directory back
     os.chdir(savedCWD)  
     return musicDict
@@ -535,7 +533,7 @@ def main():
             else:
                 clear()
                 print("Invalid Input. Please try again. \n")
-        # Youtube URL input loop
+        # Youtube URL to mp3 input loop
         while createdMP3 == False:
             unconvSongs = input("\n \nPlease paste the URL's of the music that is to be converted: \n")
             mp3Dict = []
@@ -548,8 +546,11 @@ def main():
                 mp3Dict = createMP3(urlToList(unconvSongs),directory)
                 # mp3Dict came back with no errors. Continue to Dropbox transfer portion
                 if mp3Dict:
-                    createdMP3 == True
-
+                    createdMP3 = True
+                else:
+                    # CreateMP3 returns with no value due to some Youtube URL error. Goes back to Youtube URL input loop
+                    clear()
+                    print(" The Youtube URL's provided were invalid.")
         if mp3ToDropbox and mp3Dict != None:
             print("----------------------------------------------------------------------------------------------")
             print('Now Transfering files to Dropbox...')
@@ -570,7 +571,7 @@ def main():
             print("----------------------------------------------------------------------------------------------")
             print('Now Deleting MP3 Files Locally...')
             print("---------------------------------------------------------------------------------------------- \n")    
-            deleteMusic(mp3Dict)
+            deleteItems(mp3Dict)
         print("----------------------------------------------------------------------------------------------")
         print('Finished!')
         print("---------------------------------------------------------------------------------------------- \n")
