@@ -443,17 +443,11 @@ Takes a Dropbox Acount Object + list of mp3 filenames + remote directory string 
 and uploads the music files to the given remote directory
 '''
 def uploadtoDropbox(dbxAccount, mp3Files, remoteDir):
-    try:
-        for music in mp3Files.items():
-            # the last 4 indices contain the ".mp3" file extension, removed for presentation
-            print("Uploading MP3: " + music[0][:-4])
-            with open(music[0], 'rb') as f:
-                dbxAccount.files_upload(f.read(),remoteDir + "/" +  music[0])
-    except dropbox.exceptions.ApiError:
-        print("Duplicate MP3 files found in Dropbox file. ", 
-                "If undesired, please delete the mp3 files, restart the script, and try again.")
-
-
+    for music in mp3Files.items():
+        # the last 4 indices contain the ".mp3" file extension, removed for presentation
+        print("Uploading MP3: " + music[0][:-4])
+        with open(music[0], 'rb') as f:
+            dbxAccount.files_upload(f.read(),remoteDir + "/" +  music[0])
 
 def main():
     printASCII()
