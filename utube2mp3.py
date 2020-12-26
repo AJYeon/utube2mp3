@@ -439,20 +439,29 @@ def createMP3(linkList, dir):
     return musicDict
 
 '''
-Takes a Dropbox Acount Object + list of mp3 filenames + remote directory string name 
+Takes a Dropbox Acount Object + dictionary of mp3 filenames + remote directory string name 
 and uploads the music files to the given remote directory
 '''
 def uploadtoDropbox(dbxAccount, mp3Files, remoteDir):
-    try:
-        for music in mp3Files.items():
-            # the last 4 indices contain the ".mp3" file extension, removed for presentation
-            print("Uploading MP3: " + music[0][:-4])
-            with open(music[0], 'rb') as f:
-                dbxAccount.files_upload(f.read(),remoteDir + "/" +  music[0])
-    except dropbox.exceptions.ApiError:
-        print("Duplicate MP3 files found in Dropbox file. ", 
-                "If undesired, please delete the mp3 files, restart the script, and try again.")
-
+    # passing mp3Files as a value so that it's not passed as a reference (change outside values)
+    mp3Files = mp3Files
+    # list of finished files that can be ignored for continued uploads in the case of APIError
+    finishedUploads = []
+    uploadFinished = False
+    while uploadFinished != True:
+        try:
+            for music in mp3Files.items():
+                # the last 4 indices contain the ".mp3" file extension, removed for presentation
+                print("Uploading MP3: " + music[0][:-4])
+                with open(music[0], 'rb') as f:
+                    dbxAccount.files_upload(f.read(),remoteDir + "/" +  music[0])
+                finishedUploads.append(music)
+            uploadFinished = True
+        except dropbox.exceptions.ApiError:
+            for filename in finishedUploads:
+                del mp3Files[filename]
+            print("Duplicate MP3 files found in Dropbox for the following file: " + music, 
+                    "\n Uploading remaining files. If undesired, please stop, handle the duplicate, and try again.")
 
 
 def main():
@@ -576,7 +585,6 @@ def main():
             if not dbxDirectory:
                 # If input for Dropbox directory is an empty string and local_inf exists, then set local_inf path as default Dropbox path 
                 dbxDirectory = pathExists
-            print(mp3Dict)
             uploadtoDropbox(dbx, mp3Dict, dbxDirectory)
             print("----------------------------------------------------------------------------------------------")
             print('Now Deleting MP3 Files Locally...')
