@@ -452,9 +452,9 @@ def uploadtoDropbox(dbxAccount, mp3Files, remoteDir):
 def main():
     printASCII()
     
+    modulesUpdated = False
     mp3ToDropbox = False
     resume = True
-    modulesUpdated = False
     createdMP3 = False
     localInf = retrieveLocalInf()
     
@@ -580,16 +580,16 @@ def main():
         print('Finished!')
         print("---------------------------------------------------------------------------------------------- \n")
 
+        # Continue MP3 Creation input Loop
         while True:
-            resume = input("Would you like to resume converting Youtube Videos?: \n"
+            resumeResponse = input("Would you like to resume converting Youtube Videos?: \n"
                            "(reply with 'y' to continue and 'n' to quit)\n")
-            resume = resume.lower()
-            if resume in ('y', "yes"):
+            resumeResponse = resumeResponse.lower()
+            if resumeResponse in ('y', "yes"):
                 mp3ToDropbox = False
-                resume = True
+                createdMP3 = False
                 break
-            elif resume in ('n', "no"):
-                mp3ToDropbox = False
+            elif resumeResponse in ('n', "no"):
                 resume = False
                 break
             else:
