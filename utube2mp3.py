@@ -285,6 +285,7 @@ def movetoRoot(mainDir,dirCheck):
             newFileName = os.path.join(dirCheck, file)
             tempPath = os.path.join(tempDir, file)
             rootPath = os.path.join(mainDir, file)
+            # os.rename moves the file from one directory to another
             os.rename(tempPath, rootPath)
         os.rmdir(tempDir)
         return newFileName
@@ -437,6 +438,22 @@ def createMP3(linkList, dir):
     os.chdir(savedCWD)  
     return musicDict
 
+'''
+Takes a Dropbox Acount Object + list of mp3 filenames + remote directory string name 
+and uploads the music files to the given remote directory
+'''
+def uploadtoDropbox(dbxAccount, mp3Files, remoteDir):
+    try:
+        for music in mp3Files.items():
+            # the last 4 indices contain the ".mp3" file extension, removed for presentation
+            print("Uploading MP3: " + music[0][:-4])
+            with open(music[0], 'rb') as f:
+                dbxAccount.files_upload(f.read(),remoteDir + "/" +  music[0])
+    except dropbox.exceptions.ApiError:
+        print("Duplicate MP3 files found in Dropbox file. ", 
+                "If undesired, please delete the mp3 files, restart the script, and try again.")
+
+
 
 def main():
     printASCII()
@@ -559,15 +576,8 @@ def main():
             if not dbxDirectory:
                 # If input for Dropbox directory is an empty string and local_inf exists, then set local_inf path as default Dropbox path 
                 dbxDirectory = pathExists
-            try:
-                for music in mp3Dict.items():
-                    # the last 4 indices contain the ".mp3" file extension, removed for presentation
-                    print("Uploading MP3: " + music[0][:-4])
-                    with open(music[0], 'rb') as f:
-                        dbx.files_upload(f.read(),dbxDirectory + "/" +  music[0])
-            except dropbox.exceptions.ApiError:
-                print("Duplicate MP3 files found in Dropbox file. ", 
-                      "If undesired, please delete the mp3 files, restart the script, and try again.")
+            print(mp3Dict)
+            uploadtoDropbox(dbx, mp3Dict, dbxDirectory)
             print("----------------------------------------------------------------------------------------------")
             print('Now Deleting MP3 Files Locally...')
             print("---------------------------------------------------------------------------------------------- \n")    
