@@ -5,6 +5,7 @@ Created by Andrew Yeon on July 17, 2018
 import urllib
 import os
 import sys
+import stone
 import subprocess as sp
 from collections import OrderedDict
 from socket import gaierror
@@ -182,7 +183,8 @@ def checkDropboxPath(db,path,localInf):
         try:
             db.files_alpha_get_metadata(path)
             return path
-        except dropbox.stone_validators.ValidationError:
+        # Dropbox SDK currently has a dependancy issue for invalid paths. Use validation straight from stone module.
+        except stone.backends.python_rsrc.stone_validators.ValidationError: 
             clear()
             print("Invalid Dropbox path was provided. Please provide an existing Dropbox directory to continue.")
             valError = "VE"
