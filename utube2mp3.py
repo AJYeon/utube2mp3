@@ -165,9 +165,16 @@ def updatePackages():
     return updatedPrograms
 
 def createDropboxRequest(token,localInf):
+    checkInternetConnection()
     if token:
         dbx = dropbox.Dropbox(token)
-        return dbx
+        try:
+            dbx.check_user()
+            return dbx
+        except dropbox.exceptions.AuthError:
+            clear()
+            print('Invalid access token was provided.')
+            return None
     else:
         if localInf:
             dbx = dropbox.Dropbox(localInf[0])
@@ -178,7 +185,6 @@ def createDropboxRequest(token,localInf):
             return None
 
 def checkDropboxPath(db,path,localInf):
-    checkInternetConnection()
     if path:
         try:
             db.files_alpha_get_metadata(path)
@@ -189,16 +195,6 @@ def checkDropboxPath(db,path,localInf):
             print("Invalid Dropbox path was provided. Please provide an existing Dropbox directory to continue.")
             valError = "VE"
             return valError
-        except dropbox.exceptions.AuthError:
-            clear()
-            print("Invalid access token was provided. Please provide a proper access token to continue.")
-            badATError = "AUT"
-            return badATError
-        except dropbox.exceptions.BadInputError:
-            clear()
-            print("Invalid access token was provided. Please provide a proper access token to continue.")
-            badInError = "BIE"
-            return badInError
     else:
         if localInf:
             return localInf[1]
@@ -508,8 +504,8 @@ def main():
                     while not dbx:
                         accToken = input("\n \nPlease provide the Dropbox API access token: \n"
                                          "(Note: the token must be accurate or the files can't access your Dropbox account) \n")
+                        # If the access token was invalid. Returns to beginning of Dropbox API access token input loop.
                         dbx = createDropboxRequest(accToken,localInf)
-                    retypeToken = False
                     # Dropbox directory input loop
                     while validDropboxDirectory == False:
                         dbxDirectory = input("\n \nPlease provide the Dropbox directory where the .mp3 files will be placed in: \n"
@@ -518,12 +514,9 @@ def main():
                         # Validation Error. The Dropbox path was invalid. Returns to beginning of Dropbox directory input loop.
                         if pathExists == "VE":
                             pass
-                        # Bad Input Error. The access token was invalid. Returns to beginning of Main Dropbox Path loop.
-                        elif pathExists == "BIE" or pathExists == "AUT":
-                            retypeToken = True
-                            validDropboxDirectory = True
                         # The Dropbox directory was valid and was able to have its metadata retrieved.
                         else:
+                            retypeToken = False
                             validDropboxDirectory = True   
                 break 
             elif compOrDropbox in ('l', "local", "localdirectory", "local directory"):
