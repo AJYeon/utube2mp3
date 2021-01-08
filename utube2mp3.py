@@ -307,7 +307,11 @@ Deletes all video, video segment, or music files in a dictionary in the current 
 def deleteItems(list):
     # Iteration over the key strings of the video dictionary
     for file in list:
-        os.remove(file)
+        try:
+            os.remove(file)
+        # either the music file no longer exists or already deleted (in the case of duplicate URL's)
+        except FileNotFoundError:
+            pass
 
 
 '''
