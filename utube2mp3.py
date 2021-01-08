@@ -17,8 +17,6 @@ try:
     import youtube_dl
     currentErrorMess = '(pip install dropbox)'
     import dropbox
-    currentErrorMess = "('brew install FFmpeg' and then 'pip install ffmpy')"
-    from ffmpy import FFmpeg
     currentErrorMess = "('pip install eyed3==0.8.10' and then 'pip install python-magic-bin==0.4.14')"
     import eyed3
 except ImportError:
@@ -251,9 +249,14 @@ def getTitle(url):
 '''    
 Passes a Youtube URL into youtube_dl and exports the video file to outDirectory
 '''
-def urlToVideo(url,outDirectory):
+def urlToVideo(url,fileName, outDirectory):
     checkInternetConnection()
-    ydl_opts = {'outtmpl': outDirectory, 'rejecttitle': 'True', 'nooverwrites': 'True', 'noplaylist': 'True'}
+    ydl_opts = {'format':'bestaudio/best','outtmpl': fileName + '.', 'rejecttitle': 'True', 
+    'postprocessors': [{
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'mp3',
+        'preferredquality': '192',
+    }],'extractaudio' : 'True','audioformat' : 'mp3','nooverwrites': 'True', 'noplaylist': 'True'}
     # 'quiet': True # do not print messages to stdout
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
         try:
@@ -270,102 +273,41 @@ def urlToVideo(url,outDirectory):
             clear()
             print(" The Youtube URL's provided were invalid.")
             return False
-    
-'''      
-Relocates video files with titles including '/' mistakenly parsed as an additional directory to the root directory 
-and returns a string of the relocated filepath. Helper function to getFFmpegDicts
-'''
-def movetoRoot(mainDir,dirCheck):
-    if os.path.isdir(dirCheck):
-        tempDir = os.path.join(mainDir, dirCheck)
-        remDirectory = os.listdir(tempDir)
-        for file in remDirectory:
-            newFileName = os.path.join(dirCheck, file)
-            tempPath = os.path.join(tempDir, file)
-            rootPath = os.path.join(mainDir, file)
-            # os.rename moves the file from one directory to another
-            os.rename(tempPath, rootPath)
-        os.rmdir(tempDir)
-        return newFileName
-
-'''      
-Accepts a directory of video files and returns boilerplate dictionaries of the files for FFmpeg to properly parse
-'''
-def getFFmpegDicts(dir,frontSlashTitles):
-    vidDict = {}
-    mp3Dict = {}
-    print(frontSlashTitles)
-    if frontSlashTitles['FSFileExists'] == True:
-        if sys.platform not in ("win32", "win64", "cygwin"):
-            for file in frontSlashTitles:
-                #Title had front flash in it
-                if frontSlashTitles[file] == True and file != 'FSFileExists':
-                    fileCheck = movetoRoot(dir, file[:file.rfind('/')])
-                    oldPath = os.path.join(dir, fileCheck[fileCheck.rfind('/') + 1:])
-                    # Titles with backslashes replaced with underscores. Possible to reapply the backslashes?
-                    underscorePath =  os.path.join(dir, fileCheck.replace('/','_'))
-                    os.rename(oldPath, underscorePath)
-    musicDirectory = os.listdir(dir)
-    vidList = []
-    mp3List = []
-    artList = []
-    isArtist = True
-    mapAccum = 0
-    for file in musicDirectory:
-        if file.endswith((".mkv", ".mp4", ".ogg", ".webm", ".flv")):
-            artCheck = file.rfind("-")
-            if artCheck == -1:
-                isArtist = False
-            if isArtist == True:
-                newTitle = file[file.rfind("-") + 1:]
-                newTitle = ' '.join(newTitle.split())
-                noHyphens = file.replace("-"," ")
-                artList.append(noHyphens[:artCheck])
-            else:
-                newTitle = file
-                artList.append("")
-            os.rename(os.path.join(dir, file), os.path.join(dir, newTitle))
-            vidList.append((newTitle, None))
-            # indexes the file extension of the video and replaces everything after and including the '.' with '.mp3'
-            mp3String = newTitle[:newTitle.rfind('.')] + '.mp3'
-            # additional parameters on top the mp3 file name
-            mp3List.append((mp3String,"-map " + str(mapAccum) + ":1"))
-            mapAccum += 1
-    # Because Dictionaries stores keys and values in abritrary order, OrderedDict remembers the order saved
-    vidDict = OrderedDict(vidList) 
-    mp3Dict = OrderedDict(mp3List)  
-    return(vidDict,mp3Dict,artList)
-
-
 
 '''
-Runs FFmpeg on the given dictionary of video files and creates music files with the given output dictionary
-'''
-def videosToMp3(inputDict, outputDict):
-    ff = FFmpeg(inputs = inputDict , outputs = outputDict, global_options='-y') 
-    # -n (global option): Do not overwrite output files, and exit immediately if a specified output file already exists
-    ff.cmd
-    ff.run()
-    
+Extracts the artist information from a given title and returns both the new song title and artist name
+If none, returns a tuple of original input song name and None
+'''    
+def artistFromTitle(song):
+    hyphenCheck = song.rfind("-")
+    if hyphenCheck:
+        newTitle = song[song.rfind("-") + 1:]
+        print(newTitle)
+        newTitle = ' '.join(newTitle.split())
+        print(newTitle)
+        noHyphens = song.replace("-"," ")
+        print(noHyphens)
+        artistExtract = noHyphens[:hyphenCheck]
+        return newTitle, artistExtract
+    else:
+        return song, None
+
 '''
 Removes the artist's name from the title and places it in the song's tag instead
 '''
-def setArtist(path,metadata,songs):
-    index = 0
-    for entry in songs.items():
-        songPath = os.path.join(path, entry[0])
-        audioFile = eyed3.load(songPath)
-        audioFile.tag.artist = metadata[index]
-        audioFile.tag.save()
-        index += 1
+def setArtist(path,songName,artistName):
+    songPath = os.path.join(path, songName)
+    audioFile = eyed3.load(songPath)
+    audioFile.tag.artist = artistName
+    audioFile.tag.save()
 
 '''
 Deletes all video, video segment, or music files in a dictionary in the current working directory
 '''
-def deleteItems(dict):
+def deleteItems(list):
     # Iteration over the key strings of the video dictionary
-    for file in dict.items():
-        os.remove(file[0])
+    for file in list:
+        os.remove(file)
 
 
 '''
@@ -379,7 +321,7 @@ def createMP3(linkList, dir):
         # Changes the main directory to another location
         os.chdir(dir)
     # the 0th item in the dict is updated if any of the files in linkList have a front slash in the file name
-    frontSlashDict = {'FSFileExists': False}
+    musicList = []
     for url in enumerate(linkList):
         videoName = getTitle(url[1])
         if '&#39;' in videoName:
@@ -392,60 +334,43 @@ def createMP3(linkList, dir):
             # Ampersand in decimal
             videoName = videoName.replace("&quot;",'"')
         if '/' in videoName:
-            frontSlashDict['FSFileExists'] = True
-            frontSlashDict[videoName] = True
-        else:
-            frontSlashDict[videoName] = False
+            videoName = videoName.replace('/','_')
+        artistCheck = artistFromTitle(videoName)
         print("---------------------------------------------------------------------------------------------- \n")
         print("Downloading Youtube videos " + str(url[0] + 1) + " out of " + str(len(linkList)) + "\n",  
-              "(Title: " + videoName + ") \n")
+              "(Title: " + artistCheck[0] + ") \n")
         print("---------------------------------------------------------------------------------------------- \n")
-        videoDirectory = os.path.join(dir, videoName)
-        print("videoDirectory: " + videoDirectory)
-        extractCheck = urlToVideo(url[1],videoDirectory)
+        videoDirectory = os.path.join(dir, artistCheck[0])
+        extractCheck = urlToVideo(url[1],artistCheck[0], videoDirectory)
         if extractCheck == False:
             currentDirectoryState = os.listdir(dir)
             toDelete = []
             for file in currentDirectoryState:
-                # checks if the file being observed has the same name as the video title.
-                # Excluding the FSFileExists Boolean. If so, prepare to delete it.
-                if file.startswith(tuple(frontSlashDict.keys())[1:]):
+                # checks if the file being observed has the same name as the video title. Perhaps a better way to do this?
+                if file in musicList:
                     toDelete.append(file)
             deleteItems(toDelete)
             return
-    videoDict,musicDict,artistList = getFFmpegDicts(dir,frontSlashDict)
-    
-    print("---------------------------------------------------------------------------------------------- ")
-    print('Now Converting videos to MP3...')
-    print("---------------------------------------------------------------------------------------------- \n")
-    
-    videosToMp3(videoDict,musicDict)
-
-    print("---------------------------------------------------------------------------------------------- ")
-    print('Now Modifying MP3 Metadata...')
-    print("---------------------------------------------------------------------------------------------- \n")
-    
-    setArtist(dir,artistList,musicDict)
-    
-    print("----------------------------------------------------------------------------------------------")
-    print("Now Deleting Videos...")
-    print("---------------------------------------------------------------------------------------------- \n")
-    
-    deleteItems(videoDict)
+        # required for os that require file name extensions
+        MP3Name = artistCheck[0] + '.mp3'
+        # update the metadata of the song if artistFromTitle returns a tuple of the new song title and artist name
+        if artistCheck != videoName:
+            setArtist(dir, MP3Name, artistCheck[1])
+        musicList.append(MP3Name)
     # Reverts the main directory back
     os.chdir(savedCWD)  
-    return musicDict
+    return musicList
 
 '''
 Takes a Dropbox Acount Object + list of mp3 filenames + remote directory string name 
 and uploads the music files to the given remote directory
 '''
 def uploadtoDropbox(dbxAccount, mp3Files, remoteDir):
-    for music in mp3Files.items():
+    for music in mp3Files:
         # the last 4 indices contain the ".mp3" file extension, removed for presentation
-        print("Uploading MP3: " + music[0][:-4])
-        with open(music[0], 'rb') as f:
-            dbxAccount.files_upload(f.read(),remoteDir + "/" +  music[0])
+        print("Uploading MP3: " + music[:-4])
+        with open(music, 'rb') as f:
+            dbxAccount.files_upload(f.read(),remoteDir + "/" +  music)
 
 def main():
     printASCII()
@@ -542,7 +467,6 @@ def main():
         # Youtube URL to mp3 input loop
         while createdMP3 == False:
             unconvSongs = input("\n \nPlease paste the URL's of the music that is to be converted: \n")
-            mp3Dict = []
             # Empty string was provided
             if not unconvSongs:  
                 clear()
@@ -557,7 +481,7 @@ def main():
                     # CreateMP3 returns with no value due to some Youtube URL error. Goes back to Youtube URL input loop
                     clear()
                     print(" The Youtube URL's provided were invalid.")
-        if mp3ToDropbox and mp3Dict != None:
+        if mp3ToDropbox:
             print("----------------------------------------------------------------------------------------------")
             print('Now Transfering files to Dropbox...')
             print("---------------------------------------------------------------------------------------------- \n")
@@ -565,7 +489,6 @@ def main():
             if not dbxDirectory:
                 # If input for Dropbox directory is an empty string and local_inf exists, then set local_inf path as default Dropbox path 
                 dbxDirectory = pathExists
-            print(mp3Dict)
             uploadtoDropbox(dbx, mp3Dict, dbxDirectory)
             print("----------------------------------------------------------------------------------------------")
             print('Now Deleting MP3 Files Locally...')
