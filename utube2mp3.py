@@ -54,6 +54,10 @@ def requestGET(url):
         resp = urllib.request.urlopen(req)
         respData = resp.read()
         return respData
+    except ValueError as e:
+        clear()
+        raise Exception("The following connection error has been spotted. \n" + str(e) + 
+                        "\n Please establish an internet connection first. \nExiting...") from None 
     # the 'from None' lines eliminate duplication of 'another exception occurred' lines, cleaning up output 
     except gaierror as e:
         clear()
