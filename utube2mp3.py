@@ -221,9 +221,13 @@ def urlToList(linkString):
         shaverIndex = 0
         # Enumerate can get both index and character?
         for character in enumerate(listString): 
-            if listString[character[0]:int(character[0])+6] == 'https:':
+            httpsSeparate = listString[character[0]:int(character[0])+6]
+            httpSeparate = listString[character[0]:int(character[0])+5]
+            wwwSeparate = listString[character[0]:int(character[0])+4]
+            if httpsSeparate == 'https:' or httpSeparate == 'http:' or wwwSeparate == 'www.':
                 if firstPass == False:
-                    break
+                    if wwwSeparate != 'www.':
+                        break
                 else:
                     firstPass = False
             currentLink += character[1]
@@ -334,6 +338,7 @@ def createMP3(linkList, dir):
     # the 0th item in the dict is updated if any of the files in linkList have a front slash in the file name
     musicList = []
     for url in enumerate(linkList):
+        print(url[1])
         videoName = getTitle(url[1])
         if videoName == None:
             print("---------------------------------------------------------------------------------------------- \n")
