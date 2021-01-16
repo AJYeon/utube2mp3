@@ -195,8 +195,7 @@ def checkDropboxPath(db,path,localInf):
         except stone.backends.python_rsrc.stone_validators.ValidationError: 
             clear()
             print("Invalid Dropbox path was provided. Please provide an existing Dropbox directory to continue.")
-            valError = "VE"
-            return valError
+            return None
     else:
         if localInf:
             return localInf[1]
@@ -324,6 +323,17 @@ def deleteItems(list):
         except FileNotFoundError:
             pass
 
+'''
+Given a path, return True if a give path exist and False otherwise
+'''
+def verifyPath(path):
+    if os.path.isdir(path):
+        return True
+    else:
+        clear()
+        print("Invalid path, please provide a valid path.")
+        return False
+
 
 '''
 Main operator function that takes a list of Youtube URL's and a directory 
@@ -401,6 +411,7 @@ def main():
     mp3ToDropbox = False
     resume = True
     createdMP3 = False
+    conversionReady = False
     localInf = retrieveLocalInf()
     
     #Loop for user input on whether modules should be updated or not
@@ -434,7 +445,7 @@ def main():
     # Conversion process restarts if user wishes to resume converting
     while resume == True:
         # Dropbox or Local Directory input loop
-        while True:
+        while conversionReady == False:
             compOrDropbox = input ("Would you like to save the files to Dropbox or to a local directory?: \n" 
                                   "(reply with 'd' for Dropbox and 'l' for local directory) \n").lower()
             if compOrDropbox in ('d', "dropbox", "drop"):
@@ -458,22 +469,20 @@ def main():
                                         "(Note: The directory must be valid and precise. Otherwise, the program may not finish)\n")
                         pathExists = checkDropboxPath(dbx,dbxDirectory,localInf)
                         # Validation Error. The Dropbox path was invalid. Returns to beginning of Dropbox directory input loop.
-                        if pathExists == "VE":
+                        if not pathExists:
                             pass
                         # The Dropbox directory was valid and was able to have its metadata retrieved.
                         else:
                             retypeToken = False
                             validDropboxDirectory = True   
-                break 
+                conversionReady = True 
             elif compOrDropbox in ('l', "local", "localdirectory", "local directory"):
                 while True:
                     directory = input("\n \nPlease paste the path that you would like your music to be downloaded to: \n")
                     if directory:
-                        if os.path.isdir(directory):
+                        isValid = verifyPath(directory)
+                        if isValid == True:
                             break
-                        else:
-                            clear()
-                            print("Invalid path, please provide a valid path.")
                     else:
                         if localInf:
                             directory = localInf[2]
@@ -481,7 +490,7 @@ def main():
                         else:
                             clear()
                             print("No path was provided.") 
-                break
+                conversionReady = True
             else:
                 clear()
                 print("Invalid Input. Please try again. \n")
