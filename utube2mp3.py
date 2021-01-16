@@ -238,17 +238,23 @@ def urlToList(linkString):
 Retrieves the title of a Youtube video using GET request
 '''
 def getTitle(url):
-    # Converts Bytes-like Object into a decoded string
-    strData = requestGET(url).decode()
-    titleTag = "<title>"
-    endOfTitle = "- YouTube"
-    titleStartIndex = strData.find(titleTag) +7
-    titleEndIndex = strData.find(endOfTitle) -1
-    videoTitle = strData[titleStartIndex : titleEndIndex]
-    # The video doesn't have a proper title; Exceeded Youtube's 100 character limit
-    if len(videoTitle) > 100: 
-        videoTitle = "N/A"
-    return videoTitle
+    # temporary error catching until support for other websites are implemented
+    if 'youtube' not in url.lower():
+        return None
+    else:
+        # Converts Bytes-like Object into a decoded string
+        strData = requestGET(url).decode()
+        titleTag = "<title>"
+        endOfTitle = "- YouTube"
+        # 7 is the length of string '<title>' and is meant to be excluded from the index
+        titleStartIndex = strData.find(titleTag) + 7 
+        # 1 is the whitespace before the string '- Youtube' and is meant to be excluded from the index
+        titleEndIndex = strData.find(endOfTitle) - 1
+        videoTitle = strData[titleStartIndex : titleEndIndex]
+        # The video doesn't have a proper title; Exceeded Youtube's 100 character limit
+        if len(videoTitle) > 100: 
+            videoTitle = "N/A"
+        return videoTitle
 
 '''    
 Passes a Youtube URL into youtube_dl and exports the video file to outDirectory
@@ -286,11 +292,8 @@ def artistFromTitle(song):
     hyphenCheck = song.rfind("-")
     if hyphenCheck:
         newTitle = song[song.rfind("-") + 1:]
-        print(newTitle)
         newTitle = ' '.join(newTitle.split())
-        print(newTitle)
         noHyphens = song.replace("-"," ")
-        print(noHyphens)
         artistExtract = noHyphens[:hyphenCheck]
         return newTitle, artistExtract
     else:
@@ -332,6 +335,12 @@ def createMP3(linkList, dir):
     musicList = []
     for url in enumerate(linkList):
         videoName = getTitle(url[1])
+        if videoName == None:
+            print("---------------------------------------------------------------------------------------------- \n")
+            print(" No title was found for the given URL: \n " + url[1] + "\n",
+                  "Resuming... \n")
+            print("---------------------------------------------------------------------------------------------- \n")
+            continue
         if '&#39;' in videoName:
             # Apostrophe in decimal
             videoName = videoName.replace("&#39;","'") 
@@ -416,8 +425,7 @@ def main():
             modulesUpdated = True
         else:
             clear()
-            print("No option was provided. \n")
-            
+            print("No option was provided. \n")       
     # Conversion process restarts if user wishes to resume converting
     while resume == True:
         # Dropbox or Local Directory input loop
