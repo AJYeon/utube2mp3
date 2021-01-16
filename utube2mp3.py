@@ -1,7 +1,7 @@
 """
 Created by Andrew Yeon on July 17, 2018
 """
-
+#saving this branch just in case getTitle + urllib will be used in future improvements (other websites)
 import urllib
 import os
 import sys
