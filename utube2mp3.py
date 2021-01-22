@@ -2,7 +2,6 @@
 Created by Andrew Yeon on July 17, 2018
 """
 
-import urllib
 import os
 import sys
 import stone
@@ -23,13 +22,6 @@ except ImportError:
     raise Exception("Please install the following python package before proceeding, ",
           "otherwise the program will not function properly: " + currentErrorMess + "\n") from None
 
-
-'''
-Clears all the text currently displayed on the terminal window and flushes the buffer
-'''
-def clear():
-    os.system("clear")
-
 def printASCII():
     print("----------------------------------------------------------------------------------------------")
     print("  _      _  ________  _      _  ________  ________   ______   __       __  _______   ________ ")   
@@ -43,38 +35,11 @@ def printASCII():
     print("---------------------------------------------------------------------------------------------- \n \n")
 
 '''
-Calls a GET request on a given URL. Helper function to getTitle and checkInternetConnection
+Clears all the text currently displayed on the terminal window and flushes the buffer
 '''
-def requestGET(url): 
-    try:
-        user = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
-        headers = {}
-        headers['User-Agent'] = user
-        req = urllib.request.Request(url, headers = headers)
-        resp = urllib.request.urlopen(req)
-        respData = resp.read()
-        return respData
-    except ValueError as e:
-        clear()
-        raise Exception("The following connection error has been spotted. \n" + str(e) + 
-                        "\n Please establish an internet connection first. \nExiting...") from None 
-    # the 'from None' lines eliminate duplication of 'another exception occurred' lines, cleaning up output 
-    except gaierror as e:
-        clear()
-        raise Exception("The following connection error has been spotted. \n" + str(e) + 
-                        "\n Please establish an internet connection first. \nExiting...") from None 
-    except urllib.error.URLError as e:
-        clear()
-        raise Exception("The following connection error has been spotted. \n" + str(e) + 
-                        "\n Please establish an internet connection first. \nExiting...") from None
+def clear():
+    os.system("clear")
 
-'''
-Calls requestGET with some test URL to check internet connectivity. Error-catching helper function.
-'''
-def checkInternetConnection():
-    testURL = 'https://pypi.org/simple'
-    #requestGET will handle any internet connectivity issues, returning here means connection was established
-    requestGET(testURL) 
 
 '''
 Opens file containing readable local information and returns a list containing: Dropbox API key, Dropbox destination path, 
@@ -97,7 +62,6 @@ Checks all outdated python modules needed for the running of this program and up
 '''  
 def updatePackages():
     updatedPrograms = ''
-    checkInternetConnection()
     updateLog = sp.Popen(["pip list --outdated"], shell=True, stdout=sp.PIPE)
     output = updateLog.communicate()[0]
     inVenv = False
@@ -166,8 +130,10 @@ def updatePackages():
     # Note: Don't update eyed3, doesn't function as intended after ver. 0.8.10
     return updatedPrograms
 
+'''
+
+'''
 def createDropboxRequest(token,localInf):
-    checkInternetConnection()
     if token:
         dbx = dropbox.Dropbox(token)
         try:
@@ -186,6 +152,9 @@ def createDropboxRequest(token,localInf):
             print("No access token was provided. Please provide an access token to continue.")
             return None
 
+'''
+
+'''
 def checkDropboxPath(db,path,localInf):
     if path:
         try:
@@ -240,52 +209,96 @@ def urlToList(linkString):
 '''        
 Retrieves the title of a Youtube video using GET request
 '''
-def getTitle(url):
-    # temporary error catching until support for other websites are implemented
-    if 'youtube' not in url.lower():
-        return None
-    else:
-        # Converts Bytes-like Object into a decoded string
-        strData = requestGET(url).decode()
-        titleTag = "<title>"
-        endOfTitle = "- YouTube"
-        # 7 is the length of string '<title>' and is meant to be excluded from the index
-        titleStartIndex = strData.find(titleTag) + 7 
-        # 1 is the whitespace before the string '- Youtube' and is meant to be excluded from the index
-        titleEndIndex = strData.find(endOfTitle) - 1
-        videoTitle = strData[titleStartIndex : titleEndIndex]
-        # The video doesn't have a proper title; Exceeded Youtube's 100 character limit
-        if len(videoTitle) > 100: 
-            videoTitle = "N/A"
-        return videoTitle
+def getTitle(url, ydl):
+    infoDict = ydl.extract_info(url, download = False)
+    filename = ydl.prepare_filename(infoDict)
+    # removes the entire path and leaves just the filname
+    separatePath = os.path.basename(filename)
+    print(separatePath)
+    # removes the file extension from the filename
+    finalName = os.path.splitext(separatePath)[0]
+    print(finalName)
+    return finalName
 
+'''
+
+'''
+def displayTitle (videoName, index, videoTotal):
+    print("---------------------------------------------------------------------------------------------- \n")
+    print("Downloading Youtube videos " + str(index + 1) + " out of " + str(videoTotal) + "\n",  
+            "(Title: " + videoName + ") \n")
+    print("---------------------------------------------------------------------------------------------- \n")
+
+'''
+
+'''
+def replaceCharacters(charCheck):
+    if '&#39;' in charCheck:
+        # Apostrophe in decimal
+        charCheck = charCheck.replace("&#39;","'") 
+    if '&amp;' in charCheck:
+        # Ampersand in decimal
+        charCheck = charCheck.replace("&amp;",'&')
+    if '&quot;' in charCheck:
+        #Quote in decimal
+        charCheck = charCheck.replace("&quot;",'"')
+    if '/' in charCheck:
+        charCheck = charCheck.replace('/','_')
+    return charCheck
+    
 '''    
 Passes a Youtube URL into youtube_dl and exports the video file to outDirectory
 '''
-def urlToVideo(url,fileName, outDirectory):
-    checkInternetConnection()
-    ydl_opts = {'format':'bestaudio/best','outtmpl': fileName + '.', 'rejecttitle': 'True', 
+# might have issues based on outDirectory 
+def urlToVideo(url,outDirectory, videoCount):
+    #TO DO HERE! Figuring out how to incorporate new titles based on changed metadata with youtube_dl (can change through opts?)
+    ydl_opts = {'format':'bestaudio/best','outtmpl': os.path.join(outDirectory, '%(title)s.%(ext)s'), 'rejecttitle': 'True', 
     'postprocessors': [{
         'key': 'FFmpegExtractAudio',
         'preferredcodec': 'mp3',
         'preferredquality': '192',
     }],'extractaudio' : 'True','audioformat' : 'mp3','nooverwrites': 'True', 'noplaylist': 'True'}
     # 'quiet': True # do not print messages to stdout
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        try:
-            ydl.download([url])
-        except youtube_dl.utils.DownloadError:
-            clear()
-            print("DownloadError: The video cannot be accessed.")
-            return False
-        except youtube_dl.utils.UnavailableVideoError:
-            clear()
-            print("UnavailableVideoError: The video is currently unavailable")
-            return False
-        except AttributeError: 
-            clear()
-            print(" The Youtube URL's provided were invalid.")
-            return False
+    try:
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            origTitle = getTitle(url[1],ydl)
+            if origTitle == None:
+                print("---------------------------------------------------------------------------------------------- \n")
+                print(" No title was found for the given URL: \n " + url[1] + "\n",
+                        "Resuming... \n")
+                print("---------------------------------------------------------------------------------------------- \n")
+                return False
+            else:
+                rmvChar = replaceCharacters(origTitle)
+                artistCheck = artistFromTitle(rmvChar)
+                #way to implement, get the artist name ready, download yt video as is, THEN replace the title with the new title
+                displayTitle(artistCheck[0],url[0], videoCount)
+                ydl.download([url[1]])
+                # required for modules that require file name extensions like os, eye3d and Dropbox
+                origMP3Path = os.path.join(outDirectory, origTitle + '.mp3')
+                NewMP3Name = artistCheck[0] + '.mp3'
+                NewMP3Path = os.path.join(outDirectory, NewMP3Name)
+                os.rename(origMP3Path, NewMP3Path)
+                # update the metadata of the song if artistFromTitle returns a tuple of the new song title and artist name
+                if artistCheck[0] != origTitle:
+                    setArtist(NewMP3Path, artistCheck[1])
+                return NewMP3Name
+    except youtube_dl.utils.DownloadError:
+        clear()
+        print("DownloadError: The video cannot be accessed. Please check the URL's or your internet connection and try again.")
+        return False
+    except youtube_dl.utils.UnavailableVideoError:
+        clear()
+        print("UnavailableVideoError: The video is currently unavailable")
+        return False
+    except AttributeError: 
+        clear()
+        print(" The Youtube URL's provided were invalid.")
+        return False
+    except gaierror as e:
+        clear()
+        raise Exception("The following connection error has been spotted. \n" + str(e) + 
+                        "\n Please establish an internet connection first. \nExiting...") from None 
 
 '''
 Extracts the artist information from a given title and returns both the new song title and artist name
@@ -303,10 +316,9 @@ def artistFromTitle(song):
         return song, None
 
 '''
-Removes the artist's name from the title and places it in the song's tag instead
+Places the artist's name extracted from the title and places it in the song's tag instead
 '''
-def setArtist(path,songName,artistName):
-    songPath = os.path.join(path, songName)
+def setArtist(songPath,artistName):
     audioFile = eyed3.load(songPath)
     audioFile.tag.artist = artistName
     audioFile.tag.save()
@@ -348,32 +360,7 @@ def createMP3(linkList, dir):
     # the 0th item in the dict is updated if any of the files in linkList have a front slash in the file name
     musicList = []
     for url in enumerate(linkList):
-        print(url[1])
-        videoName = getTitle(url[1])
-        if videoName == None:
-            print("---------------------------------------------------------------------------------------------- \n")
-            print(" No title was found for the given URL: \n " + url[1] + "\n",
-                  "Resuming... \n")
-            print("---------------------------------------------------------------------------------------------- \n")
-            continue
-        if '&#39;' in videoName:
-            # Apostrophe in decimal
-            videoName = videoName.replace("&#39;","'") 
-        if '&amp;' in videoName:
-            # Ampersand in decimal
-            videoName = videoName.replace("&amp;",'&')
-        if '&quot;' in videoName:
-            # Ampersand in decimal
-            videoName = videoName.replace("&quot;",'"')
-        if '/' in videoName:
-            videoName = videoName.replace('/','_')
-        artistCheck = artistFromTitle(videoName)
-        print("---------------------------------------------------------------------------------------------- \n")
-        print("Downloading Youtube videos " + str(url[0] + 1) + " out of " + str(len(linkList)) + "\n",  
-              "(Title: " + artistCheck[0] + ") \n")
-        print("---------------------------------------------------------------------------------------------- \n")
-        videoDirectory = os.path.join(dir, artistCheck[0])
-        extractCheck = urlToVideo(url[1],artistCheck[0], videoDirectory)
+        extractCheck = urlToVideo(url, dir, len(linkList))
         if extractCheck == False:
             currentDirectoryState = os.listdir(dir)
             toDelete = []
@@ -383,12 +370,7 @@ def createMP3(linkList, dir):
                     toDelete.append(file)
             deleteItems(toDelete)
             return
-        # required for os that require file name extensions
-        MP3Name = artistCheck[0] + '.mp3'
-        # update the metadata of the song if artistFromTitle returns a tuple of the new song title and artist name
-        if artistCheck != videoName:
-            setArtist(dir, MP3Name, artistCheck[1])
-        musicList.append(MP3Name)
+        musicList.append(extractCheck)
     # Reverts the main directory back
     os.chdir(savedCWD)  
     return musicList
@@ -503,27 +485,23 @@ def main():
                 print("No URL's were provided.")
             else:
                 # Executes the conversion process and returns a dictionary with the music that was converted
-                mp3Dict = createMP3(urlToList(unconvSongs),directory)
-                # mp3Dict came back with no errors. Continue to Dropbox transfer portion
-                if mp3Dict:
+                urlList = urlToList(unconvSongs)
+                mp3List = createMP3(urlList,directory)
+                # mp3Dict came back with no errors. Continue to Dropbox transfer, otherwise go back to Youtube URL input loop
+                if mp3List:
                     createdMP3 = True
-                else:
-                    # CreateMP3 returns with no value due to some Youtube URL error. Goes back to Youtube URL input loop
-                    clear()
-                    print(" The Youtube URL's provided were invalid.")
         if mp3ToDropbox:
             print("----------------------------------------------------------------------------------------------")
             print('Now Transfering files to Dropbox...')
             print("---------------------------------------------------------------------------------------------- \n")
-            checkInternetConnection()
             if not dbxDirectory:
                 # If input for Dropbox directory is an empty string and local_inf exists, then set local_inf path as default Dropbox path 
                 dbxDirectory = pathExists
-            uploadtoDropbox(dbx, mp3Dict, dbxDirectory)
+            uploadtoDropbox(dbx, mp3List, dbxDirectory)
             print("----------------------------------------------------------------------------------------------")
             print('Now Deleting MP3 Files Locally...')
             print("---------------------------------------------------------------------------------------------- \n")    
-            deleteItems(mp3Dict)
+            deleteItems(mp3List)
         print("----------------------------------------------------------------------------------------------")
         print('Finished!')
         print("---------------------------------------------------------------------------------------------- \n")
@@ -536,6 +514,7 @@ def main():
             if resumeResponse in ('y', "yes"):
                 mp3ToDropbox = False
                 createdMP3 = False
+                conversionReady = False
                 break
             elif resumeResponse in ('n', "no"):
                 resume = False
