@@ -8,6 +8,7 @@ import stone
 import subprocess as sp
 from collections import OrderedDict
 from socket import gaierror
+from requests.exceptions import ConnectionError
 
 currentErrorMess = ''
 try:
@@ -111,19 +112,6 @@ def updatePackages():
                 updatedPrograms += " dropbox"
                 break
             elif dropbox_ans in deny:
-                break
-            else:
-                print("Invalid answer. Please try again.")
-    if b"ffmpy" in output:
-        while True:
-            ffmpy_ans = input("The ffmpy module is outdated. Would you like to update the module?: \n" 
-                              "(reply with 'y' to update and 'n' to skip) \n")
-            ffmpy_ans = ffmpy_ans.lower()
-            if ffmpy_ans in confirm:
-                os.system("pip install --upgrade ffmpy")
-                updatedPrograms += " ffmpy"
-                break
-            elif ffmpy_ans in deny:
                 break
             else:
                 print("Invalid answer. Please try again.")
@@ -384,7 +372,13 @@ def uploadtoDropbox(dbxAccount, mp3Files, remoteDir):
         # the last 4 indices contain the ".mp3" file extension, removed for presentation
         print("Uploading MP3: " + music[:-4])
         with open(music, 'rb') as f:
-            dbxAccount.files_upload(f.read(),remoteDir + "/" +  music)
+            try:
+                dbxAccount.files_upload(f.read(),remoteDir + "/" +  music)
+            except ConnectionError as e:
+                deleteItems(mp3Files)
+                clear()
+                raise Exception("The following connection error has been spotted: \n \n" + str(e) + 
+                             "\n \n Please establish an internet connection first. \nExiting...") from None  
 
 def main():
     printASCII()
