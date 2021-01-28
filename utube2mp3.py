@@ -12,7 +12,6 @@ from requests.exceptions import ConnectionError
 
 currentErrorMess = ''
 try:
-    # help(yt) # documentation for youtube_dl
     currentErrorMess = '(pip install youtube_dl)'
     import youtube_dl
     currentErrorMess = '(pip install dropbox)'
@@ -119,7 +118,7 @@ def updatePackages():
     return updatedPrograms
 
 '''
-
+Takes a token and a some local resource file and returns an authenticated, logged-in Dropbox Access Account
 '''
 def createDropboxRequest(token,localInf):
     if token:
@@ -141,7 +140,8 @@ def createDropboxRequest(token,localInf):
             return None
 
 '''
-
+Takes a Dropbox account, a file path, and some local resource file and returns the filepath of a valid path
+of a DB account or None if no such filepath was found for the account.
 '''
 def checkDropboxPath(db,path,localInf):
     if path:
@@ -162,7 +162,7 @@ def checkDropboxPath(db,path,localInf):
             return None
     
 '''
-Accepts a string containing a single block of text of  Youtube URL's and separates them into list elements
+Accepts a string containing a single block of text of Youtube URL's and returns a separated list of them into elements
 '''
 def urlToList(linkString):
     # If there are any spaces, eliminate them all
@@ -181,6 +181,7 @@ def urlToList(linkString):
             httpSeparate = listString[character[0]:int(character[0])+5]
             wwwSeparate = listString[character[0]:int(character[0])+4]
             if httpsSeparate == 'https:' or httpSeparate == 'http:' or wwwSeparate == 'www.':
+                # meant to catch scenarios where 'https:' or 'http:' is followed up with a 'www.'
                 if firstPass == False:
                     if wwwSeparate != 'www.':
                         break
@@ -195,10 +196,11 @@ def urlToList(linkString):
 
 
 '''        
-Retrieves the title of a Youtube video using GET request
+Retrieves the name of the file of a Youtube video from a given url and a youtube_dl instance 
 '''
-def getTitle(url, ydl):
+def getFilename(url, ydl):
     infoDict = ydl.extract_info(url, download = False)
+    # retrieves the name of the file as opposed to the title of the video. OS issues if title is taken instead
     filename = ydl.prepare_filename(infoDict)
     # removes the entire path and leaves just the filname
     separatePath = os.path.basename(filename)
@@ -209,7 +211,7 @@ def getTitle(url, ydl):
     return finalName
 
 '''
-
+Outputs the Youtube Video title and index placement amongst the current batch of videos through the Terminal window 
 '''
 def displayTitle (videoName, index, videoTotal):
     print("---------------------------------------------------------------------------------------------- \n")
@@ -218,7 +220,7 @@ def displayTitle (videoName, index, videoTotal):
     print("---------------------------------------------------------------------------------------------- \n")
 
 '''
-
+Given a string representing a Youtube video title, returns the same string but with problematic characters removed
 '''
 def replaceCharacters(charCheck):
     if '&#39;' in charCheck:
@@ -235,7 +237,7 @@ def replaceCharacters(charCheck):
     return charCheck
     
 '''    
-Passes a Youtube URL into youtube_dl and exports the video file to outDirectory
+Primary conversion method. Passes a Youtube URL into youtube_dl and exports the video file to the outDirectory location 
 '''
 # might have issues based on outDirectory 
 def urlToVideo(url,outDirectory, videoCount):
@@ -249,7 +251,7 @@ def urlToVideo(url,outDirectory, videoCount):
     # 'quiet': True # do not print messages to stdout
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            origTitle = getTitle(url[1],ydl)
+            origTitle = getFilename(url[1],ydl)
             if origTitle == None:
                 print("---------------------------------------------------------------------------------------------- \n")
                 print(" No title was found for the given URL: \n " + url[1] + "\n",
@@ -290,7 +292,7 @@ def urlToVideo(url,outDirectory, videoCount):
 
 '''
 Extracts the artist information from a given title and returns both the new song title and artist name
-If none, returns a tuple of original input song name and None
+If no artist is found, returns a tuple of original input song name and None
 '''    
 def artistFromTitle(song):
     hyphenCheck = song.rfind("-")
@@ -304,7 +306,7 @@ def artistFromTitle(song):
         return song, None
 
 '''
-Places the artist's name extracted from the title and places it in the song's tag instead
+Takes the artist's name extracted from the title and places it in the MP3 file's 'artist' meta data instead
 '''
 def setArtist(songPath,artistName):
     audioFile = eyed3.load(songPath)
