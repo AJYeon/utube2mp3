@@ -2,6 +2,7 @@
 
 import os
 import sys
+import re
 import subprocess as sp
 from collections import OrderedDict
 from socket import gaierror
@@ -229,32 +230,17 @@ def url_to_list(link_string: str):
                       )
     list_string = ' '.join(escaped_string.split())
     print('\n list_string: ' + list_string)
-    str_length = len(list_string)
-    link_list = []
-    while str_length > 0:
-        first_pass = True
-        current_link = ""
-        shaver_index = 0
-        # Enumerate can get both index and character?
-        for character in enumerate(list_string): 
-            https_separate = list_string[character[0] : int(character[0]) + 6]
-            http_separate = list_string[character[0] : int(character[0]) + 5]
-            www_separate = list_string[character[0] : int(character[0]) + 4]
-            if (https_separate == 'https:' 
-                    or http_separate == 'http:' 
-                    or www_separate == 'www.'):
-                # Catches when 'https:' or 'http:' is followed up with 'www.'
-                if first_pass == False:
-                    if www_separate != 'www.':
-                        break
-                else:
-                    first_pass = False
-            current_link += character[1]
-            shaver_index += 1
-        link_list.append(current_link)
-        list_string = list_string[shaver_index:]
-        str_length = len(list_string) 
-    return link_list
+    url_search = re.findall((r"(https?://)?(www\.)?"
+                             "(youtube|youtu|youtube-nocookie)(.)(com|be)(/)"
+                             "(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?]{11})"
+                             )
+                             , list_string
+                             )
+    links = []
+    for item in url_search:
+        links.append(''.join(item))
+    return links
+    
 
 
 """Retrieves Youtube video's filename from a url and a youtube_dl instance."""
