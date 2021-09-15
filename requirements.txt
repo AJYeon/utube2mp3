@@ -1,0 +1,8 @@
+requests
+stone
+youtube_dl
+dropbox
+eyed3
+python-magic-bin==0.4.14
+certifi (venv)
+brew install ffmpeg / sudo apt-get install ffmpeg

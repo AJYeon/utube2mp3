@@ -307,7 +307,7 @@ def url_to_video(url: str, out_directory: str, video_count: int):
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': os.path.join(out_directory, '%(title)s.%(ext)s'), 
-        'rejecttitle': 'True', 
+        #'rejecttitle': 'True', 
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
@@ -316,7 +316,8 @@ def url_to_video(url: str, out_directory: str, video_count: int):
         'extractaudio': 'True',
         'audioformat': 'mp3',
         'nooverwrites': 'True',
-        'noplaylist': 'True'
+        'noplaylist': 'True',
+        'nocheckercertificate': 'True'
         }
     # Use 'quiet' in ydl_opts to not print messages to stdout
     # 'quiet': True 
@@ -353,6 +354,7 @@ def url_to_video(url: str, out_directory: str, video_count: int):
         if duplicate_exists:
             # Duplicate file found with the same title, 
             # don't replace by downloading a new one!
+            print("duplicate_exists!")
             return new_mp3_name, duplicate_exists
         else:
             extension_rem = new_mp3_name[:-3]
@@ -393,6 +395,9 @@ def artist_from_title(song: str):
     hyphen_check = song.rfind("-")
     if hyphen_check:
         new_title = song[song.rfind("-") + 1:]
+        valid_title = re.search('[a-zA-Z]', new_title) # if nothing in hyphen's right
+        if valid_title == None:
+            return song, None
         new_title = ' '.join(new_title.split())
         no_hyphens = song.replace("-"," ")
         artist_extract = no_hyphens[:hyphen_check]
@@ -406,6 +411,7 @@ Takes the artist's name extracted from the title
 and places it in the mp3 file's 'artist' meta data instead.
 """
 def set_artist(song_path: str,artist_name: str):
+    print("song_path: " + song_path)
     audio_file = eyed3.load(song_path)
     audio_file.tag.artist = artist_name
     audio_file.tag.save()
