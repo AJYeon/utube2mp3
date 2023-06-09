@@ -7,4 +7,3 @@ Features/bugs to work on:
   ask before updating modules
   catch DownloadError: This video is unavailable
   "would you like to resume converting" doesn’t function as intended
-  use ffmpeg as opposed to ffpmy
